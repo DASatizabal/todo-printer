@@ -1,12 +1,13 @@
 """
 Supabase Remote Task Sync
-Pulls unsynced tasks from the remote_tasks table in Supabase
-and creates them in the local SQLite database.
+Pulls unsynced tasks from the remote_tasks table in Supabase,
+creates them in the local SQLite database, and pushes local
+status updates back to Supabase for Lisa's dashboard.
 """
 
 import os
 import httpx
-from app.database import create_task
+from app.database import create_task, list_remote_tasks
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -43,8 +44,8 @@ def fetch_unsynced_tasks() -> list[dict]:
     return response.json()
 
 
-def mark_synced(remote_ids: list[str]) -> None:
-    """Mark remote_tasks rows as synced=true."""
+def mark_synced(remote_ids: list[str], local_status: str = "open") -> None:
+    """Mark remote_tasks rows as synced and set local_status."""
     if not remote_ids:
         return
 
@@ -53,23 +54,53 @@ def mark_synced(remote_ids: list[str]) -> None:
         _rest_url("remote_tasks"),
         headers={**_headers(), "Prefer": "return=minimal"},
         params={"id": f"in.({id_filter})"},
-        json={"synced": True},
+        json={"synced": True, "local_status": local_status},
         timeout=TIMEOUT,
     )
+
+
+def push_status_updates() -> dict:
+    """Push local task status back to Supabase for Lisa's dashboard."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return {"updated": 0}
+
+    tasks = list_remote_tasks()
+    if not tasks:
+        return {"updated": 0}
+
+    updated = 0
+    for task in tasks:
+        update_data = {"local_status": task["status"]}
+        if task.get("printed_at"):
+            update_data["printed_at"] = task["printed_at"]
+        if task.get("archived_at"):
+            update_data["archived_at"] = task["archived_at"]
+
+        try:
+            httpx.patch(
+                _rest_url("remote_tasks"),
+                headers={**_headers(), "Prefer": "return=minimal"},
+                params={"id": f"eq.{task['remote_id']}"},
+                json=update_data,
+                timeout=TIMEOUT,
+            )
+            updated += 1
+        except Exception:
+            pass
+
+    return {"updated": updated}
 
 
 def sync_remote_tasks() -> dict:
     """
     Pull unsynced tasks from Supabase, create them locally, mark as synced.
-    Returns a summary of what was synced.
+    Also pushes status updates back for previously synced tasks.
     """
     if not SUPABASE_URL or not SUPABASE_KEY:
-        return {"synced": 0, "errors": ["SUPABASE_URL or SUPABASE_ANON_KEY not set"]}
+        return {"synced": 0, "status_pushed": 0, "errors": ["SUPABASE_URL or SUPABASE_ANON_KEY not set"]}
 
+    # Pull new tasks
     pending = fetch_unsynced_tasks()
-    if not pending:
-        return {"synced": 0, "errors": []}
-
     synced_ids = []
     created = []
     errors = []
@@ -84,6 +115,7 @@ def sync_remote_tasks() -> dict:
                 due_time=row.get("due_time"),
                 source=row.get("source", "lisa"),
                 notes=row.get("notes"),
+                remote_id=row["id"],
             )
             synced_ids.append(row["id"])
             created.append(task)
@@ -93,8 +125,12 @@ def sync_remote_tasks() -> dict:
     if synced_ids:
         mark_synced(synced_ids)
 
+    # Push status updates for previously synced tasks
+    push_result = push_status_updates()
+
     return {
         "synced": len(synced_ids),
+        "status_pushed": push_result["updated"],
         "errors": errors,
         "tasks": created,
     }

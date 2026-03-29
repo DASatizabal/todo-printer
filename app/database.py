@@ -72,6 +72,12 @@ def init_db():
             ON tasks(priority, due_date)
         """)
 
+        # Migration: add remote_id for Supabase sync tracking
+        try:
+            conn.execute("ALTER TABLE tasks ADD COLUMN remote_id TEXT")
+        except Exception:
+            pass  # Column already exists
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -89,6 +95,7 @@ def create_task(
     due_time: str = None,
     source: str = "self",
     notes: str = None,
+    remote_id: str = None,
 ) -> dict:
     """Insert a new task and return it as a dict."""
     with get_db() as conn:
@@ -99,11 +106,11 @@ def create_task(
         cursor = conn.execute(
             """
             INSERT INTO tasks (title, category, priority, due_date, due_time,
-                               sort_order, source, notes, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               sort_order, source, notes, created_at, remote_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (title, category, priority, due_date, due_time,
-             next_order, source, notes, now_iso()),
+             next_order, source, notes, now_iso(), remote_id),
         )
         # Read from same connection before commit
         result = conn.execute("SELECT * FROM tasks WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -193,3 +200,12 @@ def mark_printed(task_ids: list[int]) -> None:
             f"UPDATE tasks SET printed_at = ? WHERE id IN ({placeholders})",
             [ts] + task_ids,
         )
+
+
+def list_remote_tasks() -> list[dict]:
+    """List all tasks that originated from Supabase (have a remote_id)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM tasks WHERE remote_id IS NOT NULL"
+        ).fetchall()
+        return [dict(r) for r in rows]

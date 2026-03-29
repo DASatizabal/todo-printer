@@ -14,9 +14,10 @@
       background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #ddd6fe 100%);
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
       padding: 24px;
+      gap: 20px;
     }
 
     .card {
@@ -25,7 +26,7 @@
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
       padding: 36px 32px;
       width: 100%;
-      max-width: 420px;
+      max-width: 480px;
     }
 
     .header { text-align: center; margin-bottom: 28px; }
@@ -68,6 +69,87 @@
     button[type="submit"]:active { transform: scale(0.98); }
     button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    /* Dashboard styles */
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .dash-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #5b21b6;
+    }
+
+    .refresh-btn {
+      padding: 6px 14px; border: 2px solid #e5e7eb; border-radius: 10px;
+      background: white; color: #6b7280; font-size: 13px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
+    }
+
+    .refresh-btn:hover { border-color: #8b5cf6; color: #7c3aed; }
+
+    .task-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .task-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px;
+      background: #fafafa;
+      border-radius: 14px;
+      border-left: 4px solid #e5e7eb;
+    }
+
+    .task-item.status-pending  { border-left-color: #f59e0b; }
+    .task-item.status-open     { border-left-color: #8b5cf6; }
+    .task-item.status-printed  { border-left-color: #6366f1; }
+    .task-item.status-archived { border-left-color: #10b981; }
+    .task-item.overdue         { background: #fef2f2; }
+
+    .task-content { flex: 1; min-width: 0; }
+
+    .task-title {
+      font-size: 15px; font-weight: 600; color: #1f2937;
+      margin-bottom: 4px; word-break: break-word;
+    }
+
+    .task-title.done { text-decoration: line-through; color: #9ca3af; }
+
+    .task-meta {
+      font-size: 12px; color: #9ca3af;
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pill-pending  { background: #fef3c7; color: #92400e; }
+    .pill-received { background: #ede9fe; color: #5b21b6; }
+    .pill-printed  { background: #e0e7ff; color: #3730a3; }
+    .pill-done     { background: #d1fae5; color: #065f46; }
+    .pill-overdue  { background: #fee2e2; color: #991b1b; }
+
+    .pill-high { background: #fee2e2; color: #991b1b; }
+    .pill-med  { background: #fef3c7; color: #92400e; }
+    .pill-low  { background: #f3f4f6; color: #6b7280; }
+
+    .empty-state {
+      text-align: center; padding: 32px 16px; color: #9ca3af; font-size: 14px;
+    }
+
+    .task-note {
+      font-size: 12px; color: #6b7280; margin-top: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
     .toast {
       position: fixed; top: 24px; left: 50%;
       transform: translateX(-50%) translateY(-100px);
@@ -80,6 +162,7 @@
   </style>
 </head>
 <body>
+  <!-- Add Task Form -->
   <div class="card">
     <div class="header">
       <h1><span class="heart">&#10084;</span> Lisa's Tasks</h1>
@@ -131,6 +214,17 @@
     </form>
   </div>
 
+  <!-- Task Dashboard -->
+  <div class="card">
+    <div class="dash-header">
+      <h2>My Tasks</h2>
+      <button class="refresh-btn" id="refresh-btn" onclick="loadTasks()">Refresh</button>
+    </div>
+    <div id="task-list" class="task-list">
+      <div class="empty-state">Loading...</div>
+    </div>
+  </div>
+
   <div class="toast" id="toast">Task added!</div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -142,7 +236,9 @@
     const form = document.getElementById('task-form');
     const toast = document.getElementById('toast');
     const submitBtn = document.getElementById('submit-btn');
+    const taskListEl = document.getElementById('task-list');
 
+    // Submit form
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       submitBtn.disabled = true;
@@ -157,18 +253,13 @@
 
       try {
         const { error } = await sb.from('remote_tasks').insert({
-          title,
-          priority,
-          category,
-          source: 'lisa',
-          due_date: dueDate,
-          due_time: dueTime,
-          notes,
+          title, priority, category, source: 'lisa',
+          due_date: dueDate, due_time: dueTime, notes,
         });
-
         if (error) throw error;
         form.reset();
         showToast('Task sent to David!');
+        loadTasks();
       } catch (err) {
         console.error(err);
         showToast('Something went wrong. Try again.');
@@ -178,11 +269,83 @@
       }
     });
 
+    // Load and render tasks
+    async function loadTasks() {
+      try {
+        const { data, error } = await sb
+          .from('remote_tasks')
+          .select('*')
+          .eq('source', 'lisa')
+          .order('created_at', { ascending: false })
+          .limit(25);
+
+        if (error) throw error;
+        renderTasks(data || []);
+      } catch (err) {
+        console.error(err);
+        taskListEl.innerHTML = '<div class="empty-state">Could not load tasks</div>';
+      }
+    }
+
+    function renderTasks(tasks) {
+      if (tasks.length === 0) {
+        taskListEl.innerHTML = '<div class="empty-state">No tasks yet. Add one above!</div>';
+        return;
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+
+      taskListEl.innerHTML = tasks.map(task => {
+        const status = getStatus(task);
+        const isOverdue = task.due_date && task.due_date < today && status.key !== 'archived';
+        const isDone = status.key === 'archived';
+        const priLabels = { 1: 'High', 2: 'Med', 3: 'Low' };
+        const priClasses = { 1: 'pill-high', 2: 'pill-med', 3: 'pill-low' };
+
+        return `
+          <div class="task-item status-${status.key} ${isOverdue ? 'overdue' : ''}">
+            <div class="task-content">
+              <div class="task-title ${isDone ? 'done' : ''}">${esc(task.title)}</div>
+              <div class="task-meta">
+                <span class="pill ${status.pillClass}">${status.label}</span>
+                <span class="pill ${priClasses[task.priority] || 'pill-med'}">${priLabels[task.priority] || 'Med'}</span>
+                ${isOverdue ? '<span class="pill pill-overdue">Overdue</span>' : ''}
+                ${task.due_date ? `<span>${task.due_date}${task.due_time ? ' ' + task.due_time : ''}</span>` : ''}
+              </div>
+              ${task.notes ? `<div class="task-note">${esc(task.notes)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getStatus(task) {
+      if (task.local_status === 'archived') {
+        return { key: 'archived', label: 'Done', pillClass: 'pill-done' };
+      }
+      if (task.printed_at) {
+        return { key: 'printed', label: 'Printed', pillClass: 'pill-printed' };
+      }
+      if (task.synced) {
+        return { key: 'open', label: 'Received', pillClass: 'pill-received' };
+      }
+      return { key: 'pending', label: 'Pending', pillClass: 'pill-pending' };
+    }
+
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
     function showToast(message) {
       toast.textContent = message;
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2500);
     }
+
+    // Load on page load
+    loadTasks();
   </script>
 </body>
 </html>
