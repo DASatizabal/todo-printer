@@ -44,6 +44,10 @@ class TaskUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class BulkCreateRequest(BaseModel):
+    tasks: list[TaskCreate] = Field(..., min_length=1)
+
+
 class ReorderRequest(BaseModel):
     task_ids: list[int] = Field(..., min_length=1)
 

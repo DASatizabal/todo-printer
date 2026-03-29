@@ -22,6 +22,7 @@ export default function FilterBar({
   onToggleMultiSelect,
   selectedCount,
   onAddClick,
+  onImport,
   onSync,
   syncPending,
   syncing,
@@ -70,6 +71,13 @@ export default function FilterBar({
           className="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-500 transition-colors"
         >
           + Add Task
+        </button>
+
+        <button
+          onClick={onImport}
+          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-cyan-700 text-cyan-100 hover:bg-cyan-600 transition-colors"
+        >
+          Import
         </button>
 
         <button

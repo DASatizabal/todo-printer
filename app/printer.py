@@ -493,23 +493,18 @@ def _print_tickets_mock(ticket_texts: list[str]) -> dict:
     }
 
 
+def _get_printer():
+    """Get a printer connection using the Windows driver (Win32Raw) or USB fallback."""
+    printer_name = os.environ.get("PRINTER_NAME", "POS-80")
+
+    from escpos.printer import Win32Raw
+    return Win32Raw(printer_name)
+
+
 def _print_tickets_live(ticket_texts: list[str]) -> dict:
-    """Send each ticket to USB printer with a cut after each one."""
+    """Send each ticket to printer with a cut after each one."""
     try:
-        from escpos.printer import Usb
-
-        vendor_id = int(os.environ.get("PRINTER_VENDOR", "0x0"), 16)
-        product_id = int(os.environ.get("PRINTER_PRODUCT", "0x0"), 16)
-
-        if vendor_id == 0 or product_id == 0:
-            return {
-                "mode": "live",
-                "status": "error",
-                "error": "PRINTER_VENDOR and PRINTER_PRODUCT env vars not set. "
-                         "Run 'lsusb' to find your NetumScan's IDs.",
-            }
-
-        printer = Usb(vendor_id, product_id)
+        printer = _get_printer()
         printer.set(align="left", font="a", width=1, height=1)
 
         for text in ticket_texts:
@@ -540,22 +535,9 @@ def _print_tickets_live(ticket_texts: list[str]) -> dict:
 
 
 def _print_live(receipt_text: str) -> dict:
-    """Send receipt to USB thermal printer via ESC/POS."""
+    """Send receipt to thermal printer via Windows driver."""
     try:
-        from escpos.printer import Usb
-
-        vendor_id = int(os.environ.get("PRINTER_VENDOR", "0x0"), 16)
-        product_id = int(os.environ.get("PRINTER_PRODUCT", "0x0"), 16)
-
-        if vendor_id == 0 or product_id == 0:
-            return {
-                "mode": "live",
-                "status": "error",
-                "error": "PRINTER_VENDOR and PRINTER_PRODUCT env vars not set. "
-                         "Run 'lsusb' to find your NetumScan's IDs.",
-            }
-
-        printer = Usb(vendor_id, product_id)
+        printer = _get_printer()
         printer.set(align="left", font="a", width=1, height=1)
 
         for line in receipt_text.split("\n"):

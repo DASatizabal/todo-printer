@@ -5,6 +5,7 @@ import FilterBar from './components/FilterBar';
 import TaskBoard from './components/TaskBoard';
 import AddTaskForm from './components/AddTaskForm';
 import EditModal from './components/EditModal';
+import ImportModal from './components/ImportModal';
 import ReceiptPreview from './components/ReceiptPreview';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
   const [multiSelect, setMultiSelect] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [receiptPreview, setReceiptPreview] = useState(null);
+  const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncPending, setSyncPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -53,6 +55,12 @@ export default function App() {
   const handleCreateTask = async (data) => {
     await api.createTask(data);
     setShowAddForm(false);
+    loadData();
+  };
+
+  const handleBulkImport = async (tasks) => {
+    await api.bulkCreateTasks(tasks);
+    setShowImport(false);
     loadData();
   };
 
@@ -200,6 +208,7 @@ export default function App() {
         }}
         selectedCount={selectedIds.size}
         onAddClick={() => setShowAddForm(true)}
+        onImport={() => setShowImport(true)}
         onSync={handleSync}
         syncPending={syncPending}
         syncing={syncing}
@@ -232,6 +241,14 @@ export default function App() {
           onRestore={handleRestoreTask}
           onReorder={handleReorder}
           showArchive={showArchive}
+        />
+      )}
+
+      {/* Import modal */}
+      {showImport && (
+        <ImportModal
+          onImport={handleBulkImport}
+          onClose={() => setShowImport(false)}
         />
       )}
 

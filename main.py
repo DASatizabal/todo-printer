@@ -20,7 +20,7 @@ from app.database import (
 )
 from app.models import (
     TaskCreate, TaskUpdate, TaskResponse,
-    ReorderRequest, PrintRequest,
+    BulkCreateRequest, ReorderRequest, PrintRequest,
 )
 
 app = FastAPI(title="Todo Printer", version="1.0.0")
@@ -130,6 +130,24 @@ def api_reorder_tasks(req: ReorderRequest):
     """Reorder tasks via drag-and-drop. task_ids list = new order."""
     reorder_tasks(req.task_ids)
     return {"detail": "Reorder complete"}
+
+
+@app.post("/api/tasks/bulk", response_model=list[TaskResponse], status_code=201)
+def api_bulk_create(req: BulkCreateRequest):
+    """Create multiple tasks at once (for Claude Chat import)."""
+    created = []
+    for task in req.tasks:
+        result = create_task(
+            title=task.title,
+            category=task.category.value,
+            priority=task.priority.value,
+            due_date=task.due_date,
+            due_time=task.due_time,
+            source=task.source.value,
+            notes=task.notes,
+        )
+        created.append(result)
+    return created
 
 
 # ---------------------------------------------------------------------------

@@ -65,6 +65,13 @@ export function previewDailyTicket() {
   return request('/api/print/daily/preview', { method: 'POST' });
 }
 
+export function bulkCreateTasks(tasks) {
+  return request('/api/tasks/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ tasks }),
+  });
+}
+
 export function syncRemoteTasks() {
   return request('/api/sync', { method: 'POST' });
 }
