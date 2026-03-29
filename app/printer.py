@@ -64,14 +64,45 @@ FUN_FACTS = [
 
 
 def get_daily_joke() -> str:
-    """Deterministic joke based on today's date (same joke all day)."""
+    """Fetch a random dad joke from icanhazdadjoke.com, with offline fallback."""
+    try:
+        import httpx
+        response = httpx.get(
+            "https://icanhazdadjoke.com/",
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "TodoPrinter (https://github.com/DASatizabal/todo-printer)",
+            },
+            timeout=5,
+        )
+        if response.status_code == 200:
+            return response.json()["joke"]
+    except Exception:
+        pass
+    # Fallback to local jokes if API is unavailable
     day_seed = date.today().toordinal()
     return DAD_JOKES[day_seed % len(DAD_JOKES)]
 
 
 def get_daily_fact() -> str:
-    """Deterministic fun fact based on today's date."""
-    day_seed = date.today().toordinal() + 7  # offset so it's not same index as joke
+    """Fetch today's useless fact from uselessfacts.jsph.pl, with offline fallback."""
+    try:
+        import httpx
+        response = httpx.get(
+            "https://uselessfacts.jsph.pl/api/v2/facts/today",
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "TodoPrinter (https://github.com/DASatizabal/todo-printer)",
+            },
+            params={"language": "en"},
+            timeout=5,
+        )
+        if response.status_code == 200:
+            return response.json()["text"]
+    except Exception:
+        pass
+    # Fallback to local facts if API is unavailable
+    day_seed = date.today().toordinal() + 7
     return FUN_FACTS[day_seed % len(FUN_FACTS)]
 
 
@@ -82,25 +113,65 @@ def get_daily_fact() -> str:
 CATEGORY_HEADERS = {
     "work": (
         "================================",
-        "       WORK TASKS",
+        "WORK TASKS",
         "================================",
     ),
     "school": (
         "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+",
-        "       SCHOOL TASKS",
+        "SCHOOL TASKS",
         "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+",
     ),
     "personal": (
         "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
-        "      PERSONAL TASKS",
+        "PERSONAL TASKS",
         "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
     ),
 }
 
+# ASCII art icons for at-a-glance ticket identification
+CATEGORY_ICONS = {
+    "work": [
+        "____________",
+        "|  ________  |",
+        "| |  WORK  | |",
+        "| |________| |",
+        "|____|_|_____|",
+    ],
+    "school": [
+        "+",
+        "A",
+        "__/_\\__",
+        "/\\-'o'-/\\",
+        "_||:<_>:||_",
+        "/\\_/=====\\_/\\",
+        "_|:_:_[I]_:_:|_",
+        "SCHOOL"
+    ],
+    "personal": [
+        "))    ",
+        "_-#-----_",
+        "/_________\\",
+        "|[] _ []|",
+        "|  |*|  |",
+        "H O M E"
+    ],
+}
+
+LISA_ICON = [
+    "**   **",
+    "*  * *  *",
+    "*   *   *",
+    "*     *",
+    "*   *",
+    "* *",
+    "*",
+    "FROM LISA",
+]
+
 PRIORITY_LABELS = {
     1: "!!! HIGH",
-    2: "    MED ",
-    3: "    LOW ",
+    2: "MED",
+    3: "LOW",
 }
 
 PRIORITY_MARKERS = {
@@ -265,6 +336,94 @@ def format_receipt(
 
 
 # ---------------------------------------------------------------------------
+# Individual Ticket Formatting
+# ---------------------------------------------------------------------------
+
+def format_ticket(
+    task: dict,
+    ticket_num: int = None,
+    total: int = None,
+) -> str:
+    """Format a single task as its own individual receipt ticket."""
+    lines = []
+    now = datetime.now()
+
+    # Header
+    lines.append(hr("="))
+    lines.append(center("~ TASK TICKET ~"))
+    lines.append(center(now.strftime("%A, %B %d, %Y")))
+    lines.append(center(now.strftime("%I:%M %p")))
+    lines.append(hr("="))
+    lines.append("")
+
+    # Lisa icon (if from Lisa, show heart prominently)
+    if task.get("source") == "lisa":
+        for icon_line in LISA_ICON:
+            lines.append(center(icon_line))
+        lines.append("")
+
+    # Category icon
+    cat = task.get("category", "personal")
+    icon_lines = CATEGORY_ICONS.get(cat, [])
+    for icon_line in icon_lines:
+        lines.append(center(icon_line))
+    lines.append("")
+
+    # Category header
+    header_lines = CATEGORY_HEADERS.get(cat, ("---", cat.upper(), "---"))
+    for h in header_lines:
+        lines.append(center(h))
+    lines.append("")
+
+    # Task content (reuse format_task_line)
+    idx = ticket_num if ticket_num is not None else 1
+    lines.extend(format_task_line(task, idx))
+
+    # Ticket counter
+    if ticket_num is not None and total is not None:
+        lines.append(center(f"[ {ticket_num} of {total} ]"))
+        lines.append("")
+
+    # Footer
+    lines.append(hr("="))
+    lines.append(center("GET IT DONE."))
+    lines.append(hr("="))
+    lines.append("")
+    lines.append("")  # feed for auto-cutter
+
+    return "\n".join(lines)
+
+
+def format_daily_ticket() -> str:
+    """Format the Ticket of the Day as a standalone receipt."""
+    lines = []
+    now = datetime.now()
+
+    lines.append(hr("="))
+    lines.append(center("~ TICKET OF THE DAY ~"))
+    lines.append(center(now.strftime("%A, %B %d, %Y")))
+    lines.append(hr("="))
+    lines.append("")
+
+    joke = get_daily_joke()
+    lines.extend(wrap_text(joke, RECEIPT_WIDTH, indent="  "))
+    lines.append("")
+
+    lines.append("  Fun fact:")
+    fact = get_daily_fact()
+    lines.extend(wrap_text(fact, RECEIPT_WIDTH, indent="  "))
+    lines.append("")
+
+    lines.append(hr("="))
+    lines.append(center("HAVE A GREAT DAY!"))
+    lines.append(hr("="))
+    lines.append("")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Printer Interface
 # ---------------------------------------------------------------------------
 
@@ -297,6 +456,87 @@ def _print_mock(receipt_text: str) -> dict:
         "file": str(filename),
         "preview": receipt_text,
     }
+
+
+def print_tickets(ticket_texts: list[str]) -> dict:
+    """
+    Print multiple individual tickets, each getting its own cut.
+    Works in both mock and live mode.
+    """
+    mode = os.environ.get("PRINTER_MODE", "mock").lower()
+
+    if mode == "live":
+        return _print_tickets_live(ticket_texts)
+    else:
+        return _print_tickets_mock(ticket_texts)
+
+
+def _print_tickets_mock(ticket_texts: list[str]) -> dict:
+    """Save each ticket as a separate file, plus a combined preview."""
+    MOCK_OUTPUT_DIR.mkdir(exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    files = []
+    for i, text in enumerate(ticket_texts, 1):
+        filename = MOCK_OUTPUT_DIR / f"ticket_{ts}_{i}.txt"
+        filename.write_text(text)
+        files.append(str(filename))
+
+    combined = "\n".join(ticket_texts)
+
+    return {
+        "mode": "mock",
+        "status": "saved",
+        "files": files,
+        "count": len(ticket_texts),
+        "preview": combined,
+    }
+
+
+def _print_tickets_live(ticket_texts: list[str]) -> dict:
+    """Send each ticket to USB printer with a cut after each one."""
+    try:
+        from escpos.printer import Usb
+
+        vendor_id = int(os.environ.get("PRINTER_VENDOR", "0x0"), 16)
+        product_id = int(os.environ.get("PRINTER_PRODUCT", "0x0"), 16)
+
+        if vendor_id == 0 or product_id == 0:
+            return {
+                "mode": "live",
+                "status": "error",
+                "error": "PRINTER_VENDOR and PRINTER_PRODUCT env vars not set. "
+                         "Run 'lsusb' to find your NetumScan's IDs.",
+            }
+
+        printer = Usb(vendor_id, product_id)
+        printer.set(align="left", font="a", width=1, height=1)
+
+        for text in ticket_texts:
+            for line in text.split("\n"):
+                printer.text(line + "\n")
+            printer.cut()
+
+        printer.close()
+
+        return {
+            "mode": "live",
+            "status": "printed",
+            "count": len(ticket_texts),
+        }
+
+    except ImportError:
+        return {
+            "mode": "live",
+            "status": "error",
+            "error": "python-escpos not installed. Run: pip install python-escpos",
+        }
+    except Exception as e:
+        return {
+            "mode": "live",
+            "status": "error",
+            "error": str(e),
+        }
 
 
 def _print_live(receipt_text: str) -> dict:

@@ -11,42 +11,15 @@ The user is David, a Business Change Manager at Elevance Health who does freelan
 - **Printer**: NetumScan 8360 USB POS Receipt Printer, 80mm, ESC/POS compatible, auto-cutter. Arriving tomorrow (March 29, 2026). Until then, use PRINTER_MODE=mock.
 - **Workstation**: AMD Ryzen 9 9950X, RTX 5080, Windows (primary dev machine)
 
-## What's Done (Sections 1-2)
+## What's Done (Sections 1-3)
 
 1. **Database layer** (`app/database.py`): SQLite with WAL, full CRUD, sorting by priority/due_date/category/sort_order, archiving, bulk reorder, batch print stamping.
 2. **Pydantic models** (`app/models.py`): Request/response validation for all endpoints.
-3. **FastAPI app** (`main.py`): 12 REST endpoints including quick-add (query params for phone shortcuts), preview, print, stats with overdue detection.
-4. **Printer module** (`app/printer.py`): Receipt formatter with category-grouped headers, priority markers, overdue flags, [FROM LISA] tags, "Ticket of the Day" (dad jokes + fun facts). Mock mode saves to files, live mode sends to USB via python-escpos.
+3. **FastAPI app** (`main.py`): REST endpoints including quick-add (query params for phone shortcuts), individual ticket print/preview, daily ticket print/preview, stats with overdue detection. Auto-loads `.env` via python-dotenv.
+4. **Printer module** (`app/printer.py`): Individual ticket formatting (one task per receipt, auto-cutter between each). ASCII art icons per category (work=monitor, school=building, personal=house) and Lisa heart. Live dad jokes from icanhazdadjoke.com API, live fun facts from uselessfacts.jsph.pl API. Static lists as offline fallback. Mock mode saves to files, live mode sends to USB via python-escpos.
+5. **React Dashboard** (`frontend/` builds to `static/`): Vite + React + Tailwind CSS v4 + @dnd-kit. Dark mode, responsive grid (1/2/3 col). Task tiles with category color borders, priority badges, overdue red ring, FROM LISA tag, drag-and-drop reorder. Filter by category, sort by manual/priority/due date/category. Add task form, edit modal, archive view with restore. Multi-select with bulk archive/print. Receipt preview side panel (thermal paper aesthetic). Print All, Print Selected, Daily Ticket buttons. Stats bar with open/overdue/archived counts. PWA manifest for home screen install.
 
 ## What Needs to Be Built
-
-### Section 3: React Dashboard (PWA)
-
-The main interface. Should be a single-page React app served by FastAPI from `/static/`.
-
-**Features:**
-- Task tiles in a grid/list layout (each tile shows title, priority badge, category color, due date, source)
-- Drag-and-drop to reorder tiles (updates sort_order via POST /api/tasks/reorder)
-- Sort controls: by priority, due date, category, or manual (drag) order
-- Filter by category (work/school/personal) with toggle buttons
-- Category color coding: work = blue, school = green/teal, personal = orange/warm
-- Overdue tasks get a red highlight/badge
-- Tasks from Lisa get a special indicator
-- Click a tile to expand/edit (inline or modal): edit title, category, priority, due date/time, notes
-- "Archive" button on each tile (marks complete, moves to archive)
-- Archive view toggle (show completed tasks, option to restore)
-- Multi-select mode: checkbox on tiles, bulk archive, bulk print
-- Receipt preview panel: shows a styled mock receipt (monospace, receipt-paper aesthetic) when you click "Preview Print"
-- Print controls: Print All, Print by Category, Print Selected
-- Add Task form: title, category, priority, due date, due time, notes
-- Stats bar at top: total open, overdue count, tasks by category
-- Responsive: works on phone browser too (PWA manifest for home screen install)
-
-**Tech choices:**
-- React JSX (single file artifact style, or proper component structure)
-- Tailwind CSS for styling
-- @dnd-kit or react-beautiful-dnd for drag-and-drop
-- Fetch API for backend calls to localhost:8000
 
 ### Section 4: Lisa's Portal + HTTP Shortcut Config
 

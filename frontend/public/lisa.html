@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#fdf2f8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Lisa's Tasks</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #f5d0fe 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .header { text-align: center; margin-bottom: 28px; }
+    .header h1 { font-size: 24px; font-weight: 700; color: #831843; margin-bottom: 4px; }
+    .header p { font-size: 14px; color: #9ca3af; }
+    .heart { display: inline-block; color: #ec4899; font-size: 20px; }
+
+    label {
+      display: block; font-size: 13px; font-weight: 600; color: #6b7280;
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .field { margin-bottom: 18px; }
+
+    input[type="text"], textarea, select {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid #e5e7eb; border-radius: 12px;
+      font-size: 16px; font-family: inherit; color: #1f2937;
+      background: #fafafa; transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none; border-color: #ec4899; background: white;
+    }
+
+    textarea { resize: none; height: 80px; }
+    .row { display: flex; gap: 12px; }
+    .row .field { flex: 1; }
+
+    button[type="submit"] {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, #ec4899, #a855f7);
+      color: white; font-size: 16px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: opacity 0.2s, transform 0.1s; margin-top: 4px;
+    }
+
+    button[type="submit"]:hover { opacity: 0.9; }
+    button[type="submit"]:active { transform: scale(0.98); }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .toast {
+      position: fixed; top: 24px; left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: #059669; color: white; padding: 14px 24px;
+      border-radius: 12px; font-size: 15px; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease; z-index: 100;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1><span class="heart">&#10084;</span> Lisa's Tasks</h1>
+      <p>Add something to David's to-do list</p>
+    </div>
+
+    <form id="task-form">
+      <div class="field">
+        <label for="title">What needs to be done?</label>
+        <input type="text" id="title" name="title" placeholder="e.g. Pick up milk" required autofocus />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority">
+            <option value="1">High</option>
+            <option value="2" selected>Medium</option>
+            <option value="3">Low</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            <option value="personal" selected>Personal</option>
+            <option value="work">Work</option>
+            <option value="school">School</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="notes">Note (optional)</label>
+        <textarea id="notes" name="notes" placeholder="Any extra details..."></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn">Send to David</button>
+    </form>
+  </div>
+
+  <div class="toast" id="toast">Task added!</div>
+
+  <script>
+    const form = document.getElementById('task-form');
+    const toast = document.getElementById('toast');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+
+      const title = document.getElementById('title').value.trim();
+      const priority = parseInt(document.getElementById('priority').value);
+      const category = document.getElementById('category').value;
+      const notes = document.getElementById('notes').value.trim();
+
+      try {
+        const res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            priority,
+            category,
+            source: 'lisa',
+            notes: notes || null,
+          }),
+        });
+
+        if (!res.ok) throw new Error('Failed');
+        form.reset();
+        showToast('Task added! David will see it.');
+      } catch (err) {
+        showToast('Something went wrong. Try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send to David';
+      }
+    });
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+  </script>
+</body>
+</html>

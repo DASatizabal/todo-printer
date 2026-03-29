@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#030712" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Quick Add Task</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #030712;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #e5e7eb;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .header { text-align: center; margin-bottom: 28px; }
+    .header h1 { font-size: 22px; font-weight: 700; color: #e5e7eb; margin-bottom: 4px; }
+    .header .brand { color: #8b5cf6; }
+    .header p { font-size: 14px; color: #6b7280; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600; color: #6b7280;
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .field { margin-bottom: 16px; }
+
+    input[type="text"], input[type="date"], input[type="time"],
+    textarea, select {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid #374151; border-radius: 12px;
+      font-size: 16px; font-family: inherit; color: #e5e7eb;
+      background: #1f2937; transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none; border-color: #8b5cf6; background: #1f2937;
+    }
+
+    input::placeholder, textarea::placeholder { color: #4b5563; }
+    textarea { resize: none; height: 72px; }
+    select option { background: #1f2937; color: #e5e7eb; }
+    .row { display: flex; gap: 12px; }
+    .row .field { flex: 1; }
+
+    .cat-btns {
+      display: flex; gap: 8px;
+    }
+
+    .cat-btn {
+      flex: 1; padding: 10px 8px; border: 2px solid #374151; border-radius: 10px;
+      background: #1f2937; color: #9ca3af; font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; text-align: center;
+      transition: all 0.15s;
+    }
+
+    .cat-btn:hover { border-color: #4b5563; color: #d1d5db; }
+    .cat-btn.active-work { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.1); }
+    .cat-btn.active-school { border-color: #14b8a6; color: #14b8a6; background: rgba(20,184,166,0.1); }
+    .cat-btn.active-personal { border-color: #f97316; color: #f97316; background: rgba(249,115,22,0.1); }
+
+    .pri-btns { display: flex; gap: 8px; }
+
+    .pri-btn {
+      flex: 1; padding: 10px 8px; border: 2px solid #374151; border-radius: 10px;
+      background: #1f2937; color: #9ca3af; font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; text-align: center;
+      transition: all 0.15s;
+    }
+
+    .pri-btn:hover { border-color: #4b5563; }
+    .pri-btn.active-1 { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.1); }
+    .pri-btn.active-2 { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
+    .pri-btn.active-3 { border-color: #6b7280; color: #9ca3af; background: rgba(107,114,128,0.1); }
+
+    button[type="submit"] {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+      color: white; font-size: 16px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: opacity 0.2s, transform 0.1s; margin-top: 8px;
+    }
+
+    button[type="submit"]:hover { opacity: 0.9; }
+    button[type="submit"]:active { transform: scale(0.98); }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .toast {
+      position: fixed; top: 24px; left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: #059669; color: white; padding: 14px 24px;
+      border-radius: 12px; font-size: 15px; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transition: transform 0.3s ease; z-index: 100;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1><span class="brand">todo</span>printer</h1>
+      <p>Quick add from anywhere</p>
+    </div>
+
+    <form id="task-form">
+      <div class="field">
+        <label>Task</label>
+        <input type="text" id="title" placeholder="What needs to be done?" required autofocus />
+      </div>
+
+      <div class="field">
+        <label>Category</label>
+        <div class="cat-btns">
+          <button type="button" class="cat-btn" data-cat="work">Work</button>
+          <button type="button" class="cat-btn" data-cat="school">School</button>
+          <button type="button" class="cat-btn active-personal" data-cat="personal">Personal</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Priority</label>
+        <div class="pri-btns">
+          <button type="button" class="pri-btn" data-pri="1">High</button>
+          <button type="button" class="pri-btn active-2" data-pri="2">Med</button>
+          <button type="button" class="pri-btn" data-pri="3">Low</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="due_date">Due date</label>
+          <input type="date" id="due_date" />
+        </div>
+        <div class="field">
+          <label for="due_time">Time</label>
+          <input type="time" id="due_time" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="notes">Notes</label>
+        <textarea id="notes" placeholder="Optional..."></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn">Add Task</button>
+    </form>
+  </div>
+
+  <div class="toast" id="toast">Task added!</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://ypxoaeckjvveoodsjzdj.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_ODeoDNk6_4fNKK9EFysyXw_MXilpb06';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let category = 'personal';
+    let priority = 2;
+
+    // Category toggle buttons
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
+        category = btn.dataset.cat;
+        btn.classList.add(`active-${category}`);
+      });
+    });
+
+    // Priority toggle buttons
+    document.querySelectorAll('.pri-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.pri-btn').forEach(b => b.className = 'pri-btn');
+        priority = parseInt(btn.dataset.pri);
+        btn.classList.add(`active-${priority}`);
+      });
+    });
+
+    const form = document.getElementById('task-form');
+    const toast = document.getElementById('toast');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+
+      const title = document.getElementById('title').value.trim();
+      const dueDate = document.getElementById('due_date').value || null;
+      const dueTime = document.getElementById('due_time').value || null;
+      const notes = document.getElementById('notes').value.trim() || null;
+
+      try {
+        const { error } = await sb.from('remote_tasks').insert({
+          title,
+          priority,
+          category,
+          source: 'self',
+          due_date: dueDate,
+          due_time: dueTime,
+          notes,
+        });
+
+        if (error) throw error;
+        form.reset();
+        // Reset button states
+        document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
+        document.querySelector('[data-cat="personal"]').classList.add('active-personal');
+        document.querySelectorAll('.pri-btn').forEach(b => b.className = 'pri-btn');
+        document.querySelector('[data-pri="2"]').classList.add('active-2');
+        category = 'personal';
+        priority = 2;
+        showToast('Task added! Sync from dashboard.');
+      } catch (err) {
+        console.error(err);
+        showToast('Something went wrong. Try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Task';
+      }
+    });
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+  </script>
+</body>
+</html>

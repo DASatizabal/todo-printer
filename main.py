@@ -3,6 +3,9 @@ Todo Printer - FastAPI Application
 REST API for task management + thermal receipt printing.
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -130,45 +133,106 @@ def api_reorder_tasks(req: ReorderRequest):
 
 
 # ---------------------------------------------------------------------------
+# Supabase Sync
+# ---------------------------------------------------------------------------
+
+@app.post("/api/sync")
+def api_sync():
+    """Pull unsynced tasks from Supabase and create them locally."""
+    from app.supabase_sync import sync_remote_tasks
+    return sync_remote_tasks()
+
+
+@app.get("/api/sync/pending")
+def api_sync_pending():
+    """Check how many remote tasks are waiting to be synced."""
+    from app.supabase_sync import fetch_unsynced_tasks
+    try:
+        pending = fetch_unsynced_tasks()
+        return {"pending": len(pending)}
+    except Exception:
+        return {"pending": 0}
+
+
+# ---------------------------------------------------------------------------
 # Print Endpoints
 # ---------------------------------------------------------------------------
 
 @app.post("/api/print")
 def api_print_tasks(req: PrintRequest):
     """
-    Print tasks to the thermal receipt printer.
-    Options:
-      - task_ids: print specific tasks
-      - category: print all open tasks in a category
-      - all_open: print all open tasks
+    Print tasks as individual tickets (one per task, each gets a cut).
+    Includes a Ticket of the Day bonus ticket when printing all open tasks.
     """
     tasks = _resolve_print_tasks(req)
 
-    from app.printer import format_receipt, print_receipt
+    from app.printer import format_ticket, format_daily_ticket, print_tickets
 
-    receipt_text = format_receipt(tasks)
-    result = print_receipt(receipt_text)
+    tickets = []
+
+    # Ticket of the Day goes first when printing all open tasks
+    if req.all_open:
+        tickets.append(format_daily_ticket())
+
+    for i, task in enumerate(tasks, 1):
+        tickets.append(format_ticket(task, ticket_num=i, total=len(tasks)))
+
+    result = print_tickets(tickets)
 
     task_ids = [t["id"] for t in tasks]
     mark_printed(task_ids)
 
     return {
-        "detail": f"Printed {len(tasks)} task(s)",
+        "detail": f"Printed {len(tasks)} task(s) as individual tickets",
         "printer": result,
     }
 
 
 @app.post("/api/print/preview")
 def api_preview_receipt(req: PrintRequest):
-    """Preview what the receipt would look like without printing."""
+    """Preview individual tickets without printing."""
     tasks = _resolve_print_tasks(req)
 
-    from app.printer import format_receipt
-    receipt_text = format_receipt(tasks)
+    from app.printer import format_ticket, format_daily_ticket
+
+    tickets = []
+
+    if req.all_open:
+        tickets.append(format_daily_ticket())
+
+    for i, task in enumerate(tasks, 1):
+        tickets.append(format_ticket(task, ticket_num=i, total=len(tasks)))
+
+    preview = "\n".join(tickets)
 
     return {
-        "detail": f"Preview of {len(tasks)} task(s)",
-        "preview": receipt_text,
+        "detail": f"Preview of {len(tasks)} individual ticket(s)",
+        "preview": preview,
+    }
+
+
+@app.post("/api/print/daily")
+def api_print_daily_ticket():
+    """Print only the Ticket of the Day."""
+    from app.printer import format_daily_ticket, print_tickets
+
+    ticket = format_daily_ticket()
+    result = print_tickets([ticket])
+
+    return {
+        "detail": "Printed Ticket of the Day",
+        "printer": result,
+    }
+
+
+@app.post("/api/print/daily/preview")
+def api_preview_daily_ticket():
+    """Preview the Ticket of the Day."""
+    from app.printer import format_daily_ticket
+
+    return {
+        "detail": "Ticket of the Day preview",
+        "preview": format_daily_ticket(),
     }
 
 
@@ -252,7 +316,7 @@ def api_stats():
 # Serve Dashboard (static files)
 # ---------------------------------------------------------------------------
 
-STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
