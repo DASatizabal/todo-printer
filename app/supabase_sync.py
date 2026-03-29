@@ -7,7 +7,7 @@ status updates back to Supabase for Lisa's dashboard.
 
 import os
 import httpx
-from app.database import create_task, list_remote_tasks
+from app.database import create_task, list_remote_tasks, get_connection
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -59,10 +59,52 @@ def mark_synced(remote_ids: list[str], local_status: str = "open") -> None:
     )
 
 
+def backfill_remote_ids() -> int:
+    """Link local tasks to Supabase rows that were synced before remote_id tracking."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return 0
+
+    # Find Supabase rows that are synced but have no local_status (orphaned)
+    response = httpx.get(
+        _rest_url("remote_tasks"),
+        headers=_headers(),
+        params={"synced": "eq.true", "local_status": "is.null", "select": "id,title"},
+        timeout=TIMEOUT,
+    )
+    if response.status_code != 200:
+        return 0
+
+    orphans = response.json()
+    if not orphans:
+        return 0
+
+    conn = get_connection()
+    linked = 0
+    try:
+        for row in orphans:
+            local = conn.execute(
+                "SELECT id FROM tasks WHERE title = ? AND remote_id IS NULL",
+                (row["title"],),
+            ).fetchone()
+            if local:
+                conn.execute(
+                    "UPDATE tasks SET remote_id = ? WHERE id = ?",
+                    (row["id"], local["id"]),
+                )
+                linked += 1
+        conn.commit()
+    finally:
+        conn.close()
+    return linked
+
+
 def push_status_updates() -> dict:
     """Push local task status back to Supabase for Lisa's dashboard."""
     if not SUPABASE_URL or not SUPABASE_KEY:
         return {"updated": 0}
+
+    # Auto-link any orphaned tasks first
+    backfill_remote_ids()
 
     tasks = list_remote_tasks()
     if not tasks:
