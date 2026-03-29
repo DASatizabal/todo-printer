@@ -1,0 +1,21 @@
+{
+  "name": "Lisa's Tasks",
+  "short_name": "Lisa Tasks",
+  "description": "Add tasks to David's to-do list",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f3ff",
+  "theme_color": "#8b5cf6",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
