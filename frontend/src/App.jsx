@@ -115,6 +115,13 @@ export default function App() {
     loadData();
   };
 
+  const handleBulkDelete = async () => {
+    await Promise.all([...selectedIds].map(api.deleteTask));
+    setSelectedIds(new Set());
+    setMultiSelect(false);
+    loadData();
+  };
+
   // --------------------------------------------------
   // Printing
   // --------------------------------------------------
@@ -217,6 +224,7 @@ export default function App() {
         onPrintAll={handlePrintAll}
         onPrintSelected={handlePrintSelected}
         onBulkArchive={handleBulkArchive}
+        onBulkDelete={handleBulkDelete}
       />
 
       {showAddForm && (

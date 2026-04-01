@@ -394,8 +394,8 @@ def format_ticket(
     return "\n".join(lines)
 
 
-def format_daily_ticket() -> str:
-    """Format the Ticket of the Day as a standalone receipt."""
+def format_daily_ticket(weather: dict = None) -> str:
+    """Format the Ticket of the Day as a standalone receipt, with optional weather."""
     lines = []
     now = datetime.now()
 
@@ -405,10 +405,20 @@ def format_daily_ticket() -> str:
     lines.append(hr("="))
     lines.append("")
 
+    # Weather
+    if weather:
+        from app.weather import format_weather_lines
+        lines.append(center("-- WEATHER --"))
+        for wl in format_weather_lines(weather):
+            lines.append(center(wl))
+        lines.append("")
+
+    # Joke
     joke = get_daily_joke()
     lines.extend(wrap_text(joke, RECEIPT_WIDTH, indent="  "))
     lines.append("")
 
+    # Fun fact
     lines.append("  Fun fact:")
     fact = get_daily_fact()
     lines.extend(wrap_text(fact, RECEIPT_WIDTH, indent="  "))

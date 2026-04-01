@@ -31,6 +31,7 @@ export default function FilterBar({
   onPrintAll,
   onPrintSelected,
   onBulkArchive,
+  onBulkDelete,
 }) {
   return (
     <div className="px-4 py-3 space-y-2.5 border-b border-gray-800">
@@ -132,6 +133,12 @@ export default function FilterBar({
                 className="px-3 py-1.5 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 transition-colors"
               >
                 Print ({selectedCount})
+              </button>
+              <button
+                onClick={onBulkDelete}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/15 transition-colors"
+              >
+                Delete ({selectedCount})
               </button>
             </>
           )}

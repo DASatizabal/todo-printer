@@ -190,7 +190,8 @@ def api_print_tasks(req: PrintRequest):
 
     # Ticket of the Day goes first when printing all open tasks
     if req.all_open:
-        tickets.append(format_daily_ticket())
+        weather = _get_weather()
+        tickets.append(format_daily_ticket(weather=weather))
 
     for i, task in enumerate(tasks, 1):
         tickets.append(format_ticket(task, ticket_num=i, total=len(tasks)))
@@ -216,7 +217,8 @@ def api_preview_receipt(req: PrintRequest):
     tickets = []
 
     if req.all_open:
-        tickets.append(format_daily_ticket())
+        weather = _get_weather()
+        tickets.append(format_daily_ticket(weather=weather))
 
     for i, task in enumerate(tasks, 1):
         tickets.append(format_ticket(task, ticket_num=i, total=len(tasks)))
@@ -229,12 +231,22 @@ def api_preview_receipt(req: PrintRequest):
     }
 
 
+def _get_weather():
+    """Fetch weather, return None silently on failure."""
+    try:
+        from app.weather import fetch_weather
+        return fetch_weather()
+    except Exception:
+        return None
+
+
 @app.post("/api/print/daily")
 def api_print_daily_ticket():
-    """Print only the Ticket of the Day."""
+    """Print only the Ticket of the Day (with weather)."""
     from app.printer import format_daily_ticket, print_tickets
 
-    ticket = format_daily_ticket()
+    weather = _get_weather()
+    ticket = format_daily_ticket(weather=weather)
     result = print_tickets([ticket])
 
     return {
@@ -245,12 +257,13 @@ def api_print_daily_ticket():
 
 @app.post("/api/print/daily/preview")
 def api_preview_daily_ticket():
-    """Preview the Ticket of the Day."""
+    """Preview the Ticket of the Day (with weather)."""
     from app.printer import format_daily_ticket
 
+    weather = _get_weather()
     return {
         "detail": "Ticket of the Day preview",
-        "preview": format_daily_ticket(),
+        "preview": format_daily_ticket(weather=weather),
     }
 
 
