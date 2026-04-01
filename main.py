@@ -6,11 +6,13 @@ REST API for task management + thermal receipt printing.
 from dotenv import load_dotenv
 load_dotenv()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from typing import Optional
+import asyncio
 import os
 
 from app.database import (
@@ -23,7 +25,29 @@ from app.models import (
     BulkCreateRequest, ReorderRequest, PrintRequest,
 )
 
-app = FastAPI(title="Todo Printer", version="1.0.0")
+SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL", "30"))  # seconds
+
+
+async def _auto_sync_loop():
+    """Background loop that syncs Supabase every SYNC_INTERVAL seconds."""
+    while True:
+        await asyncio.sleep(SYNC_INTERVAL)
+        try:
+            from app.supabase_sync import sync_remote_tasks
+            sync_remote_tasks()
+        except Exception:
+            pass  # never crash the background loop
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    task = asyncio.create_task(_auto_sync_loop())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="Todo Printer", version="1.0.0", lifespan=lifespan)
 
 # CORS - allow the dashboard and phone shortcuts to hit the API
 app.add_middleware(
@@ -33,11 +57,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def startup():
-    init_db()
 
 
 # ---------------------------------------------------------------------------

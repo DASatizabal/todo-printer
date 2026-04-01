@@ -6,102 +6,162 @@ Requires: pip install Pillow
 
 from PIL import Image, ImageDraw, ImageFont
 import os
+import math
 
 SIZES = [16, 32, 48, 64, 128, 256]
 OUTPUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "todo_printer.ico")
 
 
 def draw_icon(size):
-    """Draw a receipt/ticket icon with a checkmark."""
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    """Draw a bold thermal printer icon - dark printer body with receipt coming out."""
+    # Use supersampling for smooth edges
+    ss = 4
+    s = size * ss
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Receipt background (white rounded rect with slight shadow)
-    margin = size // 8
-    receipt_top = margin
-    receipt_bottom = size - margin
-    receipt_left = size // 5
-    receipt_right = size - size // 5
+    # -- Color palette --
+    bg_dark = (30, 30, 40)          # near-black background circle
+    printer_body = (55, 60, 75)     # dark slate printer
+    printer_top = (70, 75, 92)      # slightly lighter top face
+    printer_accent = (90, 95, 115)  # edge highlight
+    receipt_white = (252, 250, 245)  # warm white receipt paper
+    receipt_shadow = (220, 215, 205)
+    green = (52, 211, 110)          # vibrant green check
+    green_dark = (34, 180, 85)
+    orange = (255, 160, 40)         # warm accent for the feed slot
 
-    # Shadow
-    shadow_offset = max(1, size // 32)
-    draw.rounded_rectangle(
-        [receipt_left + shadow_offset, receipt_top + shadow_offset,
-         receipt_right + shadow_offset, receipt_bottom + shadow_offset],
-        radius=size // 16,
-        fill=(0, 0, 0, 60),
-    )
+    pad = s * 0.04  # tiny padding
 
-    # Receipt body
-    draw.rounded_rectangle(
-        [receipt_left, receipt_top, receipt_right, receipt_bottom],
-        radius=size // 16,
-        fill=(255, 255, 255, 255),
-        outline=(80, 80, 80, 255),
-        width=max(1, size // 32),
-    )
+    # -- Background circle (filled, acts as app icon bg) --
+    draw.ellipse([pad, pad, s - pad, s - pad], fill=bg_dark)
 
-    # Zigzag bottom edge (receipt tear)
-    zigzag_y = receipt_bottom - size // 10
-    teeth = max(3, size // 12)
-    tooth_width = (receipt_right - receipt_left) / teeth
+    # -- Printer body (bottom 55% of icon) --
+    px1 = s * 0.12
+    px2 = s * 0.88
+    py1 = s * 0.42
+    py2 = s * 0.82
+    r = s * 0.06
+
+    # Body shadow
+    draw.rounded_rectangle([px1 + s*0.02, py1 + s*0.02, px2 + s*0.02, py2 + s*0.02],
+                           radius=r, fill=(0, 0, 0, 80))
+    # Body
+    draw.rounded_rectangle([px1, py1, px2, py2], radius=r, fill=printer_body)
+    # Top face (slightly lighter strip)
+    draw.rounded_rectangle([px1, py1, px2, py1 + s*0.12], radius=r, fill=printer_top)
+    # Paper feed slot (orange accent line)
+    slot_y = py1 + s * 0.04
+    slot_h = s * 0.035
+    draw.rounded_rectangle([px1 + s*0.18, slot_y, px2 - s*0.18, slot_y + slot_h],
+                           radius=slot_h/2, fill=orange)
+
+    # Subtle edge highlights
+    draw.line([(px1 + r, py1), (px2 - r, py1)], fill=printer_accent, width=max(1, int(s * 0.01)))
+
+    # -- Small indicator light (green dot on printer) --
+    light_x = px2 - s * 0.18
+    light_y = py1 + s * 0.08
+    light_r = s * 0.025
+    draw.ellipse([light_x - light_r, light_y - light_r,
+                  light_x + light_r, light_y + light_r], fill=green)
+
+    # -- Receipt paper (coming out the top of the printer) --
+    rw = s * 0.44  # receipt width
+    rx1 = s * 0.5 - rw / 2
+    rx2 = s * 0.5 + rw / 2
+    ry1 = s * 0.10  # top of receipt
+    ry2 = py1 + s * 0.06  # overlaps into the printer slot
+
+    # Receipt shadow
+    draw.rounded_rectangle([rx1 + s*0.015, ry1 + s*0.01, rx2 + s*0.015, ry2],
+                           radius=s*0.02, fill=(0, 0, 0, 50))
+    # Receipt paper
+    draw.rounded_rectangle([rx1, ry1, rx2, ry2], radius=s*0.02, fill=receipt_white)
+
+    # -- Zigzag torn edge at top of receipt --
+    teeth = max(4, int(size * 0.35))
+    tooth_w = rw / teeth
+    tooth_h = s * 0.03
     for i in range(teeth):
-        x1 = receipt_left + i * tooth_width
-        x2 = x1 + tooth_width / 2
-        x3 = x1 + tooth_width
-        draw.polygon(
-            [(x1, zigzag_y), (x2, zigzag_y + size // 12), (x3, zigzag_y)],
-            fill=(255, 255, 255, 255),
-        )
+        tx1 = rx1 + i * tooth_w
+        tx2 = tx1 + tooth_w / 2
+        tx3 = tx1 + tooth_w
+        # Cut into the receipt top with background color triangles
+        draw.polygon([(tx1, ry1), (tx2, ry1 + tooth_h), (tx3, ry1)], fill=bg_dark)
 
-    # "Lines" on receipt (task lines)
-    line_y_start = receipt_top + size // 4
-    line_spacing = size // 8
-    line_left = receipt_left + size // 8
-    line_right = receipt_right - size // 8
-    line_width = max(1, size // 24)
+    # -- Task lines on receipt --
+    line_area_top = ry1 + s * 0.07
+    line_area_bot = ry2 - s * 0.04
+    num_lines = 3
+    line_spacing = (line_area_bot - line_area_top) / (num_lines + 0.5)
+    line_thickness = max(1, int(s * 0.018))
+    cb_size = s * 0.035
 
-    for i in range(3):
-        y = line_y_start + i * line_spacing
-        if y < zigzag_y - size // 12:
-            # Small checkbox
-            cb_size = max(2, size // 16)
-            draw.rectangle(
-                [line_left, y - cb_size // 2, line_left + cb_size, y + cb_size // 2],
-                outline=(100, 100, 100, 255),
-                width=max(1, size // 64),
-            )
-            # Line
-            draw.line(
-                [(line_left + cb_size + max(2, size // 20), y),
-                 (line_right - (i * size // 10), y)],
-                fill=(160, 160, 160, 255),
-                width=line_width,
-            )
+    for i in range(num_lines):
+        ly = line_area_top + (i + 0.5) * line_spacing
+        lx1 = rx1 + s * 0.05
+        lx2 = rx2 - s * 0.05
 
-    # Green checkmark overlay (bottom-right)
-    check_center_x = receipt_right - size // 8
-    check_center_y = receipt_bottom - size // 5
-    check_r = size // 5
+        # Checkbox
+        cb_x = lx1
+        cb_y = ly - cb_size / 2
 
-    draw.ellipse(
-        [check_center_x - check_r, check_center_y - check_r,
-         check_center_x + check_r, check_center_y + check_r],
-        fill=(34, 197, 94, 240),
-    )
+        if i == 0:
+            # First task: checked (green fill + checkmark)
+            draw.rounded_rectangle([cb_x, cb_y, cb_x + cb_size, cb_y + cb_size],
+                                   radius=s*0.008, fill=green)
+            # Checkmark
+            ck_w = max(1, int(s * 0.014))
+            draw.line([(cb_x + cb_size*0.2, ly),
+                       (cb_x + cb_size*0.45, ly + cb_size*0.3)],
+                      fill=(255, 255, 255), width=ck_w)
+            draw.line([(cb_x + cb_size*0.45, ly + cb_size*0.3),
+                       (cb_x + cb_size*0.8, ly - cb_size*0.2)],
+                      fill=(255, 255, 255), width=ck_w)
+            # Strikethrough line (completed task)
+            task_lx = cb_x + cb_size + s * 0.02
+            line_len = (lx2 - task_lx) * 0.85
+            draw.line([(task_lx, ly), (task_lx + line_len, ly)],
+                      fill=(180, 175, 165), width=line_thickness)
+        else:
+            # Unchecked box
+            draw.rounded_rectangle([cb_x, cb_y, cb_x + cb_size, cb_y + cb_size],
+                                   radius=s*0.008, outline=(180, 175, 160), width=max(1, int(s*0.01)))
+            # Task line
+            task_lx = cb_x + cb_size + s * 0.02
+            line_len = (lx2 - task_lx) * (0.9 - i * 0.15)
+            draw.line([(task_lx, ly), (task_lx + line_len, ly)],
+                      fill=(100, 95, 85), width=line_thickness)
 
-    # Checkmark
-    cw = max(1, size // 20)
-    cx, cy = check_center_x, check_center_y
-    draw.line(
-        [(cx - check_r * 0.4, cy), (cx - check_r * 0.05, cy + check_r * 0.35)],
-        fill=(255, 255, 255, 255), width=cw,
-    )
-    draw.line(
-        [(cx - check_r * 0.05, cy + check_r * 0.35), (cx + check_r * 0.4, cy - check_r * 0.3)],
-        fill=(255, 255, 255, 255), width=cw,
-    )
+    # -- Big green checkmark badge (bottom-right corner, overlapping printer) --
+    badge_r = s * 0.15
+    badge_cx = px2 - s * 0.06
+    badge_cy = py2 - s * 0.06
 
+    # Badge shadow
+    draw.ellipse([badge_cx - badge_r + s*0.01, badge_cy - badge_r + s*0.015,
+                  badge_cx + badge_r + s*0.01, badge_cy + badge_r + s*0.015],
+                 fill=(0, 0, 0, 90))
+    # Badge circle
+    draw.ellipse([badge_cx - badge_r, badge_cy - badge_r,
+                  badge_cx + badge_r, badge_cy + badge_r],
+                 fill=green)
+    # White border
+    draw.ellipse([badge_cx - badge_r, badge_cy - badge_r,
+                  badge_cx + badge_r, badge_cy + badge_r],
+                 outline=(255, 255, 255, 200), width=max(1, int(s * 0.015)))
+    # Checkmark in badge
+    ck_w = max(2, int(s * 0.03))
+    draw.line([(badge_cx - badge_r*0.45, badge_cy + badge_r*0.05),
+               (badge_cx - badge_r*0.05, badge_cy + badge_r*0.4)],
+              fill=(255, 255, 255), width=ck_w)
+    draw.line([(badge_cx - badge_r*0.05, badge_cy + badge_r*0.4),
+               (badge_cx + badge_r*0.45, badge_cy - badge_r*0.3)],
+              fill=(255, 255, 255), width=ck_w)
+
+    # Downsample back to target size with high-quality resampling
+    img = img.resize((size, size), Image.LANCZOS)
     return img
 
 
