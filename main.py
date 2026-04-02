@@ -30,11 +30,13 @@ SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL", "30"))  # seconds
 
 async def _auto_sync_loop():
     """Background loop that syncs Supabase every SYNC_INTERVAL seconds."""
+    from app.supabase_sync import sync_remote_tasks
+    loop = asyncio.get_event_loop()
     while True:
         await asyncio.sleep(SYNC_INTERVAL)
         try:
-            from app.supabase_sync import sync_remote_tasks
-            sync_remote_tasks()
+            # Run in thread pool — sync uses blocking httpx calls
+            await loop.run_in_executor(None, sync_remote_tasks)
         except Exception:
             pass  # never crash the background loop
 

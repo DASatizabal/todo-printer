@@ -47,7 +47,11 @@ export default function App() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 30000); // refresh every 30s
+    const interval = setInterval(async () => {
+      // Sync remote tasks first, then refresh the UI
+      try { await api.syncRemoteTasks(); } catch {}
+      loadData();
+    }, 30000);
     return () => clearInterval(interval);
   }, [loadData]);
 
