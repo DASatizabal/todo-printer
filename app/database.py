@@ -202,6 +202,28 @@ def mark_printed(task_ids: list[int]) -> None:
         )
 
 
+def list_unprinted_tasks(category: str = None, sort_by: str = "priority") -> list[dict]:
+    """List open tasks that have not been printed yet."""
+    query = "SELECT * FROM tasks WHERE status = 'open' AND printed_at IS NULL"
+    params: list = []
+
+    if category:
+        query += " AND category = ?"
+        params.append(category)
+
+    order_map = {
+        "sort_order": "sort_order ASC",
+        "priority": "priority ASC, due_date ASC NULLS LAST, sort_order ASC",
+        "due_date": "due_date ASC NULLS LAST, priority ASC, sort_order ASC",
+        "category": "category ASC, priority ASC, sort_order ASC",
+    }
+    query += f" ORDER BY {order_map.get(sort_by, 'priority ASC, due_date ASC NULLS LAST, sort_order ASC')}"
+
+    with get_db() as conn:
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+
 def list_remote_tasks() -> list[dict]:
     """List all tasks that originated from Supabase (have a remote_id)."""
     with get_db() as conn:

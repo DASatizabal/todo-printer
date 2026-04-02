@@ -56,9 +56,10 @@ def main():
     tickets.append(format_daily_ticket(weather=weather))
 
     if not daily_only:
-        # Get all open tasks sorted by priority
-        tasks = list_tasks(status="open", sort_by="priority")
-        print(f"Open tasks: {len(tasks)}")
+        # Get unprinted open tasks only
+        all_open = list_tasks(status="open", sort_by="priority")
+        tasks = [t for t in all_open if not t.get("printed_at")]
+        print(f"Open tasks: {len(all_open)}, Unprinted: {len(tasks)}")
 
         for i, task in enumerate(tasks, 1):
             tickets.append(format_ticket(task, ticket_num=i, total=len(tasks)))

@@ -72,7 +72,8 @@ export default function TaskBoard({
 
   const gridClass = 'p-4 grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
 
-  if (!isDraggable) {
+  // When viewing archive, show flat list
+  if (showArchive) {
     return (
       <div className={gridClass}>
         {tasks.map((task) => <TaskTile {...tileProps(task)} />)}
@@ -80,13 +81,42 @@ export default function TaskBoard({
     );
   }
 
-  return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={tasks.map((t) => t.id)} strategy={rectSortingStrategy}>
+  // Split open tasks into New (unprinted) and Printed
+  const newTasks = tasks.filter((t) => !t.printed_at);
+  const printedTasks = tasks.filter((t) => t.printed_at);
+
+  const renderSection = (title, sectionTasks) => {
+    if (sectionTasks.length === 0) return null;
+
+    if (isDraggable) {
+      return (
+        <>
+          <h2 className="px-4 pt-4 pb-1 text-lg font-bold text-gray-200">{title}</h2>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={sectionTasks.map((t) => t.id)} strategy={rectSortingStrategy}>
+              <div className={gridClass}>
+                {sectionTasks.map((task) => <TaskTile {...tileProps(task)} />)}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <h2 className="px-4 pt-4 pb-1 text-lg font-bold text-gray-200">{title}</h2>
         <div className={gridClass}>
-          {tasks.map((task) => <TaskTile {...tileProps(task)} />)}
+          {sectionTasks.map((task) => <TaskTile {...tileProps(task)} />)}
         </div>
-      </SortableContext>
-    </DndContext>
+      </>
+    );
+  };
+
+  return (
+    <div className="flex-1">
+      {renderSection('New', newTasks)}
+      {renderSection('Printed', printedTasks)}
+    </div>
   );
 }

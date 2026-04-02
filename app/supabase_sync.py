@@ -7,7 +7,7 @@ status updates back to Supabase for Lisa's dashboard.
 
 import os
 import httpx
-from app.database import create_task, list_remote_tasks, get_connection
+from app.database import create_task, list_remote_tasks, get_connection, mark_printed
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -147,6 +147,8 @@ def sync_remote_tasks() -> dict:
     created = []
     errors = []
 
+    printed_ids = []
+
     for row in pending:
         try:
             task = create_task(
@@ -161,8 +163,21 @@ def sync_remote_tasks() -> dict:
             )
             synced_ids.append(row["id"])
             created.append(task)
+
+            # Auto quick-print Lisa's tasks
+            if row.get("source", "lisa") == "lisa":
+                try:
+                    from app.printer import format_ticket, print_tickets
+                    ticket = format_ticket(task, ticket_num=1, total=1)
+                    print_tickets([ticket])
+                    printed_ids.append(task["id"])
+                except Exception:
+                    pass  # print failure shouldn't block sync
         except Exception as e:
             errors.append(f"Failed to create '{row.get('title')}': {str(e)}")
+
+    if printed_ids:
+        mark_printed(printed_ids)
 
     if synced_ids:
         mark_synced(synced_ids)

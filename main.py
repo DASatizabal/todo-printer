@@ -16,7 +16,7 @@ import asyncio
 import os
 
 from app.database import (
-    init_db, create_task, get_task, list_tasks,
+    init_db, create_task, get_task, list_tasks, list_unprinted_tasks,
     update_task, archive_task, reorder_tasks,
     delete_task, mark_printed,
 )
@@ -68,6 +68,14 @@ app.add_middleware(
 )
 
 
+def _quick_print_task(task: dict):
+    """Print a single task immediately and mark it as printed."""
+    from app.printer import format_ticket, print_tickets
+    ticket = format_ticket(task, ticket_num=1, total=1)
+    print_tickets([ticket])
+    mark_printed([task["id"]])
+
+
 # ---------------------------------------------------------------------------
 # Task CRUD
 # ---------------------------------------------------------------------------
@@ -84,7 +92,7 @@ def api_list_tasks(
 
 @app.post("/api/tasks", response_model=TaskResponse, status_code=201)
 def api_create_task(task: TaskCreate):
-    """Create a new task."""
+    """Create a new task. Auto quick-prints if source is lisa."""
     result = create_task(
         title=task.title,
         category=task.category.value,
@@ -94,6 +102,10 @@ def api_create_task(task: TaskCreate):
         source=task.source.value,
         notes=task.notes,
     )
+
+    if task.source.value == "lisa":
+        _quick_print_task(result)
+
     return result
 
 
@@ -298,9 +310,9 @@ def api_preview_daily_ticket():
 def _resolve_print_tasks(req: PrintRequest) -> list[dict]:
     """Resolve which tasks to print based on the request."""
     if req.all_open:
-        tasks = list_tasks(status="open", sort_by="priority")
+        tasks = list_unprinted_tasks()
     elif req.category:
-        tasks = list_tasks(status="open", category=req.category.value, sort_by="priority")
+        tasks = list_unprinted_tasks(category=req.category.value)
     elif req.task_ids:
         tasks = [get_task(tid) for tid in req.task_ids]
         tasks = [t for t in tasks if t is not None]
@@ -324,10 +336,12 @@ def api_quick_add(
     source: str = Query("self", pattern="^(self|lisa|calendar)$"),
     due_date: Optional[str] = Query(None),
     due_time: Optional[str] = Query(None),
+    quick_print: bool = Query(False),
 ):
     """
     Simplified endpoint for HTTP Shortcuts / quick add.
     Uses query params instead of JSON body for easy shortcut config.
+    If quick_print=true, prints immediately and marks as printed.
     """
     result = create_task(
         title=title,
@@ -337,6 +351,10 @@ def api_quick_add(
         due_date=due_date,
         due_time=due_time,
     )
+
+    if quick_print:
+        _quick_print_task(result)
+
     return result
 
 
