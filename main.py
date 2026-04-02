@@ -25,12 +25,13 @@ from app.models import (
     BulkCreateRequest, ReorderRequest, PrintRequest,
 )
 
+from app.supabase_sync import sync_remote_tasks
+
 SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL", "30"))  # seconds
 
 
 async def _auto_sync_loop():
     """Background loop that syncs Supabase every SYNC_INTERVAL seconds."""
-    from app.supabase_sync import sync_remote_tasks
     loop = asyncio.get_event_loop()
     while True:
         await asyncio.sleep(SYNC_INTERVAL)
@@ -44,6 +45,12 @@ async def _auto_sync_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # Sync immediately on startup
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(None, sync_remote_tasks)
+    except Exception:
+        pass
     task = asyncio.create_task(_auto_sync_loop())
     yield
     task.cancel()
