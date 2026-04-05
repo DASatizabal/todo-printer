@@ -19,7 +19,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
-from app.database import init_db, list_tasks
+from app.database import init_db, list_tasks, mark_printed
 from app.printer import format_ticket, format_daily_ticket, print_tickets
 from app.weather import fetch_weather
 from app.supabase_sync import sync_remote_tasks
@@ -78,6 +78,12 @@ def main():
         if status == "error":
             print(f"Error: {result.get('error', 'unknown')}")
             sys.exit(1)
+
+        # Mark tasks as printed
+        if not daily_only and tasks:
+            task_ids = [t["id"] for t in tasks]
+            mark_printed(task_ids)
+            print(f"Marked {len(task_ids)} task(s) as printed")
 
     print("Done!")
 

@@ -10,7 +10,7 @@ import httpx
 # Florida City, FL coordinates (override with env vars)
 LATITUDE = os.environ.get("WEATHER_LAT", "25.4480")
 LONGITUDE = os.environ.get("WEATHER_LON", "-80.4788")
-TIMEOUT = 10
+TIMEOUT = 20
 
 # WMO weather codes to descriptions
 WMO_CODES = {
@@ -27,7 +27,17 @@ WMO_CODES = {
 
 
 def fetch_weather() -> dict | None:
-    """Fetch current weather and daily forecast for the configured location."""
+    """Fetch current weather and daily forecast for the configured location.
+    Retries once on failure (Task Scheduler can be flaky on first network call).
+    """
+    for attempt in range(2):
+        result = _try_fetch_weather()
+        if result is not None:
+            return result
+    return None
+
+
+def _try_fetch_weather() -> dict | None:
     try:
         response = httpx.get(
             "https://api.open-meteo.com/v1/forecast",
