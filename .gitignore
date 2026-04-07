@@ -29,3 +29,11 @@ Thumbs.db
 
 # Node
 node_modules/
+
+# Runtime / generated
+.server.pid
+daily_print.log
+icon_preview.png
+
+# Claude Code
+.claude/
