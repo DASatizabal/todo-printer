@@ -162,12 +162,16 @@ def draw_icon(size):
 
     # Downsample back to target size with high-quality resampling
     img = img.resize((size, size), Image.LANCZOS)
-    return img
+
+    # Flatten onto solid background (Windows shortcuts don't render alpha well)
+    flat = Image.new("RGB", (size, size), bg_dark)
+    flat.paste(img, mask=img.split()[3])  # use alpha as mask
+    return flat
 
 
 def main():
     images = [draw_icon(s) for s in SIZES]
-    images[0].save(OUTPUT, format="ICO", sizes=[(s, s) for s in SIZES], append_images=images[1:])
+    images[-1].save(OUTPUT, format="ICO", sizes=[(s, s) for s in SIZES], append_images=images[:-1])
     print(f"Icon saved to {OUTPUT}")
 
 
