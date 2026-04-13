@@ -164,8 +164,8 @@ def sync_remote_tasks() -> dict:
             synced_ids.append(row["id"])
             created.append(task)
 
-            # Auto quick-print Lisa's tasks
-            if row.get("source", "lisa") == "lisa":
+            # Auto quick-print Lisa's tasks or tasks with quick_print flag
+            if row.get("source", "lisa") == "lisa" or row.get("quick_print"):
                 try:
                     from app.printer import format_ticket, print_tickets
                     ticket = format_ticket(task, ticket_num=1, total=1)

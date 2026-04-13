@@ -258,6 +258,7 @@
         const { error } = await sb.from('remote_tasks').insert({
           title, priority, category, source: 'lisa',
           due_date: dueDate, due_time: dueTime, notes,
+          quick_print: true,
         });
         if (error) throw error;
         form.reset();

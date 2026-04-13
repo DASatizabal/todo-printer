@@ -160,6 +160,11 @@
         <textarea id="notes" placeholder="Optional..."></textarea>
       </div>
 
+      <div class="field" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="quick-print" style="width:20px;height:20px;accent-color:#8b5cf6;cursor:pointer;" />
+        <label for="quick-print" style="margin:0;text-transform:none;font-size:14px;color:#9ca3af;cursor:pointer;">Print directly</label>
+      </div>
+
       <button type="submit" id="submit-btn">Add Task</button>
     </form>
   </div>
@@ -206,6 +211,7 @@
       const dueDate = document.getElementById('due_date').value || null;
       const dueTime = document.getElementById('due_time').value || null;
       const notes = document.getElementById('notes').value.trim() || null;
+      const quickPrint = document.getElementById('quick-print').checked;
 
       try {
         const { error } = await sb.from('remote_tasks').insert({
@@ -216,6 +222,7 @@
           due_date: dueDate,
           due_time: dueTime,
           notes,
+          quick_print: quickPrint,
         });
 
         if (error) throw error;
@@ -227,7 +234,8 @@
         document.querySelector('[data-pri="2"]').classList.add('active-2');
         category = 'personal';
         priority = 2;
-        showToast('Task added! Sync from dashboard.');
+        document.getElementById('quick-print').checked = false;
+        showToast(quickPrint ? 'Task added & printing!' : 'Task added! Sync from dashboard.');
       } catch (err) {
         console.error(err);
         showToast('Something went wrong. Try again.');
