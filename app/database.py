@@ -78,6 +78,23 @@ def init_db():
         except Exception:
             pass  # Column already exists
 
+        # Migration: drop duplicate rows that share a remote_id (created by a
+        # sync race between the server loop and the daily-print run), keeping the
+        # earliest, then enforce uniqueness so it can't happen again.
+        conn.execute("""
+            DELETE FROM tasks
+            WHERE remote_id IS NOT NULL
+              AND id NOT IN (
+                  SELECT MIN(id) FROM tasks
+                  WHERE remote_id IS NOT NULL
+                  GROUP BY remote_id
+              )
+        """)
+        conn.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_remote_id
+            ON tasks(remote_id) WHERE remote_id IS NOT NULL
+        """)
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -97,21 +114,44 @@ def create_task(
     notes: str = None,
     remote_id: str = None,
 ) -> dict:
-    """Insert a new task and return it as a dict."""
+    """Insert a new task and return it as a dict.
+
+    If remote_id is given and already exists locally, the existing task is
+    returned instead of creating a duplicate (guards against the sync race
+    where two runs pull the same unsynced Supabase row concurrently).
+    """
     with get_db() as conn:
+        # Idempotent on remote_id: don't create a second copy of a synced task.
+        if remote_id is not None:
+            existing = conn.execute(
+                "SELECT * FROM tasks WHERE remote_id = ?", (remote_id,)
+            ).fetchone()
+            if existing:
+                return dict(existing)
+
         # New tasks get sort_order = max + 1 so they land at the bottom
         row = conn.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM tasks WHERE status = 'open'").fetchone()
         next_order = row[0]
 
-        cursor = conn.execute(
-            """
-            INSERT INTO tasks (title, category, priority, due_date, due_time,
-                               sort_order, source, notes, created_at, remote_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (title, category, priority, due_date, due_time,
-             next_order, source, notes, now_iso(), remote_id),
-        )
+        try:
+            cursor = conn.execute(
+                """
+                INSERT INTO tasks (title, category, priority, due_date, due_time,
+                                   sort_order, source, notes, created_at, remote_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (title, category, priority, due_date, due_time,
+                 next_order, source, notes, now_iso(), remote_id),
+            )
+        except sqlite3.IntegrityError:
+            # Lost the race to a concurrent run that inserted the same remote_id;
+            # the unique index rejected this insert. Return the row that won.
+            existing = conn.execute(
+                "SELECT * FROM tasks WHERE remote_id = ?", (remote_id,)
+            ).fetchone()
+            if existing:
+                return dict(existing)
+            raise
         # Read from same connection before commit
         result = conn.execute("SELECT * FROM tasks WHERE id = ?", (cursor.lastrowid,)).fetchone()
         return dict(result)
