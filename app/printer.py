@@ -394,7 +394,7 @@ def format_ticket(
     return "\n".join(lines)
 
 
-def format_daily_ticket(weather: dict = None) -> str:
+def format_daily_ticket(weather: dict = None, sync_error: str = None) -> str:
     """Format the Ticket of the Day as a standalone receipt, with optional weather."""
     lines = []
     now = datetime.now()
@@ -404,6 +404,14 @@ def format_daily_ticket(weather: dict = None) -> str:
     lines.append(center(now.strftime("%A, %B %d, %Y")))
     lines.append(hr("="))
     lines.append("")
+
+    # Sync alert (printed prominently so a broken sync can't go unnoticed)
+    if sync_error:
+        lines.append(center("!! TASK SYNC FAILED !!"))
+        lines.extend(wrap_text(sync_error, RECEIPT_WIDTH, indent="  "))
+        lines.append(center("(remote tasks may be missing)"))
+        lines.append(hr("-"))
+        lines.append("")
 
     # Weather
     if weather:

@@ -22,7 +22,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 from app.database import init_db, list_tasks, mark_printed
 from app.printer import format_ticket, format_daily_ticket, print_tickets
 from app.weather import fetch_weather
-from app.supabase_sync import sync_remote_tasks
+from app.supabase_sync import sync_remote_tasks, keep_alive
 
 
 def main():
@@ -32,15 +32,27 @@ def main():
     # Initialize database
     init_db()
 
-    # Sync any pending remote tasks first
-    try:
-        result = sync_remote_tasks()
-        if result.get("synced", 0) > 0:
-            print(f"Synced {result['synced']} remote task(s)")
-        if result.get("status_pushed", 0) > 0:
-            print(f"Pushed {result['status_pushed']} status update(s)")
-    except Exception as e:
-        print(f"Sync skipped: {e}")
+    # Keep-alive ping (prevents Supabase free-tier auto-pause) + fast connectivity gate.
+    # Any failure is surfaced on the printed Ticket of the Day so it can't go unnoticed.
+    sync_error = None
+    ka = keep_alive()
+    if ka["ok"]:
+        try:
+            result = sync_remote_tasks()
+            if result.get("synced", 0) > 0:
+                print(f"Synced {result['synced']} remote task(s)")
+            if result.get("status_pushed", 0) > 0:
+                print(f"Pushed {result['status_pushed']} status update(s)")
+            errs = result.get("errors") or []
+            if errs:
+                sync_error = "; ".join(errs)
+        except Exception as e:
+            sync_error = str(e)
+    else:
+        sync_error = ka["error"]
+
+    if sync_error:
+        print(f"Sync error: {sync_error}")
 
     # Fetch weather
     weather = fetch_weather()
@@ -53,7 +65,7 @@ def main():
     tickets = []
 
     # Ticket of the Day always prints first
-    tickets.append(format_daily_ticket(weather=weather))
+    tickets.append(format_daily_ticket(weather=weather, sync_error=sync_error))
 
     if not daily_only:
         # Get unprinted open tasks only

@@ -26,6 +26,42 @@ def _rest_url(table: str) -> str:
     return f"{SUPABASE_URL}/rest/v1/{table}"
 
 
+def _friendly_error(e: Exception) -> str:
+    """Turn a raw httpx/network exception into a human-readable line for the ticket."""
+    if isinstance(e, httpx.HTTPStatusError):
+        code = e.response.status_code
+        if code == 521:
+            return "Supabase project paused/unreachable (HTTP 521) - restore it at supabase.com/dashboard"
+        return f"Supabase returned HTTP {code}"
+    msg = str(e)
+    if isinstance(e, (httpx.ConnectError, httpx.ConnectTimeout)) or "getaddrinfo" in msg:
+        return "Cannot reach Supabase (network/DNS error)"
+    if isinstance(e, httpx.TimeoutException):
+        return "Supabase timed out"
+    return f"{type(e).__name__}: {msg}"
+
+
+def keep_alive() -> dict:
+    """
+    Lightweight ping that keeps the Supabase free-tier project from auto-pausing
+    and doubles as a fast connectivity gate. Returns {"ok": bool, "error": str | None}.
+    """
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return {"ok": False, "error": "SUPABASE_URL or SUPABASE_ANON_KEY not set"}
+
+    try:
+        response = httpx.get(
+            _rest_url("remote_tasks"),
+            headers=_headers(),
+            params={"select": "id", "limit": 1},
+            timeout=TIMEOUT,
+        )
+        response.raise_for_status()
+        return {"ok": True, "error": None}
+    except Exception as e:
+        return {"ok": False, "error": _friendly_error(e)}
+
+
 def fetch_unsynced_tasks() -> list[dict]:
     """Fetch all rows from remote_tasks where synced=false."""
     if not SUPABASE_URL or not SUPABASE_KEY:
@@ -142,7 +178,11 @@ def sync_remote_tasks() -> dict:
         return {"synced": 0, "status_pushed": 0, "errors": ["SUPABASE_URL or SUPABASE_ANON_KEY not set"]}
 
     # Pull new tasks
-    pending = fetch_unsynced_tasks()
+    try:
+        pending = fetch_unsynced_tasks()
+    except Exception as e:
+        return {"synced": 0, "status_pushed": 0, "errors": [_friendly_error(e)]}
+
     synced_ids = []
     created = []
     errors = []
