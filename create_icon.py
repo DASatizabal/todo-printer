@@ -171,7 +171,15 @@ def draw_icon(size):
 
 def main():
     images = [draw_icon(s) for s in SIZES]
-    images[-1].save(OUTPUT, format="ICO", sizes=[(s, s) for s in SIZES], append_images=images[:-1])
+    # Save as uncompressed BMP entries (bitmap_format="bmp"). PNG-compressed ICO
+    # entries are unreliable in the Windows shell icon cache and can render blank.
+    images[-1].save(
+        OUTPUT,
+        format="ICO",
+        sizes=[(s, s) for s in SIZES],
+        append_images=images[:-1],
+        bitmap_format="bmp",
+    )
     print(f"Icon saved to {OUTPUT}")
 
 
