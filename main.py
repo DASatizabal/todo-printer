@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="Todo Printer", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Todo Printer", version="1.0.1", lifespan=lifespan)
 
 # CORS - allow the dashboard and phone shortcuts to hit the API
 app.add_middleware(
