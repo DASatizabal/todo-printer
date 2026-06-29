@@ -7,7 +7,7 @@ status updates back to Supabase for Lisa's dashboard.
 
 import os
 import httpx
-from app.database import create_task, list_remote_tasks, get_connection, mark_printed
+from app.database import create_task, list_remote_tasks, get_connection, mark_printed, now_iso
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
@@ -169,6 +169,48 @@ def push_status_updates() -> dict:
     return {"updated": updated}
 
 
+def reconcile_deleted() -> int:
+    """
+    Heal orphaned Supabase rows whose local task no longer exists.
+
+    A row that is synced but has no matching local task means the local copy was
+    deleted (hard delete). Without this, the row stays local_status='open' forever
+    and Lisa's dashboard keeps showing it as "Received" even though it's done.
+    We mark such rows archived so they show as "Done".
+    """
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return 0
+
+    # Active remote rows that have been synced but not yet archived
+    response = httpx.get(
+        _rest_url("remote_tasks"),
+        headers=_headers(),
+        params={"synced": "eq.true", "archived_at": "is.null", "select": "id"},
+        timeout=TIMEOUT,
+    )
+    if response.status_code != 200:
+        return 0
+
+    remote_ids = [row["id"] for row in response.json()]
+    if not remote_ids:
+        return 0
+
+    # remote_ids still backed by a local task
+    local_ids = {t["remote_id"] for t in list_remote_tasks() if t.get("remote_id")}
+    orphans = [rid for rid in remote_ids if rid not in local_ids]
+    if not orphans:
+        return 0
+
+    httpx.patch(
+        _rest_url("remote_tasks"),
+        headers={**_headers(), "Prefer": "return=minimal"},
+        params={"id": f"in.({','.join(orphans)})"},
+        json={"local_status": "archived", "archived_at": now_iso()},
+        timeout=TIMEOUT,
+    )
+    return len(orphans)
+
+
 def sync_remote_tasks() -> dict:
     """
     Pull unsynced tasks from Supabase, create them locally, mark as synced.
@@ -225,9 +267,17 @@ def sync_remote_tasks() -> dict:
     # Push status updates for previously synced tasks
     push_result = push_status_updates()
 
+    # Heal rows whose local task was deleted (otherwise stuck as "Received")
+    reconciled = 0
+    try:
+        reconciled = reconcile_deleted()
+    except Exception:
+        pass  # reconciliation is best-effort; never fail the sync over it
+
     return {
         "synced": len(synced_ids),
         "status_pushed": push_result["updated"],
+        "reconciled": reconciled,
         "errors": errors,
         "tasks": created,
     }
