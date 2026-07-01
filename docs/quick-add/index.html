@@ -27,10 +27,10 @@
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
       padding: 36px 32px;
       width: 100%;
-      max-width: 420px;
+      max-width: 480px;
     }
 
-    .header { text-align: center; margin-bottom: 28px; }
+    .header { text-align: center; margin-bottom: 24px; }
     .header h1 { font-size: 22px; font-weight: 700; color: #e5e7eb; margin-bottom: 4px; }
     .header .brand { color: #8b5cf6; }
     .header p { font-size: 14px; color: #6b7280; }
@@ -56,14 +56,24 @@
     }
 
     input::placeholder, textarea::placeholder { color: #4b5563; }
-    textarea { resize: none; height: 72px; }
+    textarea { resize: vertical; height: 72px; }
     select option { background: #1f2937; color: #e5e7eb; }
     .row { display: flex; gap: 12px; }
     .row .field { flex: 1; }
 
-    .cat-btns {
-      display: flex; gap: 8px;
+    /* Mode tabs */
+    .tabs {
+      display: flex; gap: 8px; margin-bottom: 24px;
+      background: #1f2937; padding: 4px; border-radius: 12px;
     }
+    .tab {
+      flex: 1; padding: 10px; border: none; border-radius: 9px;
+      background: transparent; color: #9ca3af; font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
+    }
+    .tab.active { background: #8b5cf6; color: white; }
+
+    .cat-btns { display: flex; gap: 8px; }
 
     .cat-btn {
       flex: 1; padding: 10px 8px; border: 2px solid #374151; border-radius: 10px;
@@ -91,16 +101,16 @@
     .pri-btn.active-2 { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
     .pri-btn.active-3 { border-color: #6b7280; color: #9ca3af; background: rgba(107,114,128,0.1); }
 
-    button[type="submit"] {
+    button[type="submit"], .btn-primary {
       width: 100%; padding: 14px; border: none; border-radius: 12px;
       background: linear-gradient(135deg, #7c3aed, #8b5cf6);
       color: white; font-size: 16px; font-weight: 600; font-family: inherit;
       cursor: pointer; transition: opacity 0.2s, transform 0.1s; margin-top: 8px;
     }
 
-    button[type="submit"]:hover { opacity: 0.9; }
-    button[type="submit"]:active { transform: scale(0.98); }
-    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+    button[type="submit"]:hover, .btn-primary:hover { opacity: 0.9; }
+    button[type="submit"]:active, .btn-primary:active { transform: scale(0.98); }
+    button[type="submit"]:disabled, .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .toast {
       position: fixed; top: 24px; left: 50%;
@@ -108,9 +118,78 @@
       background: #059669; color: white; padding: 14px 24px;
       border-radius: 12px; font-size: 15px; font-weight: 500;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-      transition: transform 0.3s ease; z-index: 100;
+      transition: transform 0.3s ease; z-index: 100; max-width: 90vw; text-align: center;
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { background: #dc2626; }
+
+    .hidden { display: none !important; }
+
+    /* Bulk mode */
+    .dropzone {
+      border: 2px dashed #374151; border-radius: 12px; padding: 24px 16px;
+      text-align: center; color: #9ca3af; cursor: pointer;
+      transition: all 0.15s; background: #1f2937;
+    }
+    .dropzone:hover, .dropzone.dragover { border-color: #8b5cf6; color: #d1d5db; background: rgba(139,92,246,0.06); }
+    .dropzone strong { color: #a78bfa; }
+    .dropzone small { display: block; margin-top: 6px; color: #6b7280; font-size: 12px; }
+
+    .divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: #4b5563; font-size: 12px; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #1f2937; }
+
+    .dl-btns { display: flex; gap: 8px; margin-bottom: 18px; }
+    .dl-btn {
+      flex: 1; padding: 10px; border: 1px solid #374151; border-radius: 10px;
+      background: #1f2937; color: #9ca3af; font-size: 13px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.15s; text-align: center;
+    }
+    .dl-btn:hover { border-color: #8b5cf6; color: #c4b5fd; }
+
+    /* Guide */
+    details.guide {
+      margin-bottom: 18px; background: #1f2937; border: 1px solid #374151;
+      border-radius: 12px; overflow: hidden;
+    }
+    details.guide summary {
+      padding: 12px 14px; cursor: pointer; font-size: 13px; font-weight: 600;
+      color: #a78bfa; list-style: none; user-select: none;
+    }
+    details.guide summary::-webkit-details-marker { display: none; }
+    details.guide summary::before { content: '▸ '; }
+    details.guide[open] summary::before { content: '▾ '; }
+    .guide-body { padding: 0 14px 14px; font-size: 13px; color: #9ca3af; line-height: 1.6; }
+    .guide-body table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    .guide-body th, .guide-body td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #374151; vertical-align: top; }
+    .guide-body th { color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .guide-body code { background: #030712; color: #c4b5fd; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .guide-body pre {
+      background: #030712; color: #d1d5db; padding: 12px; border-radius: 8px;
+      overflow-x: auto; font-size: 12px; line-height: 1.5; margin: 8px 0;
+    }
+
+    /* Preview */
+    .preview { margin-top: 6px; }
+    .preview-summary { font-size: 14px; margin-bottom: 10px; }
+    .preview-summary .ok { color: #34d399; font-weight: 600; }
+    .preview-summary .bad { color: #f87171; font-weight: 600; }
+    .errors {
+      background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.3);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;
+      max-height: 160px; overflow-y: auto; font-size: 13px; color: #fca5a5; line-height: 1.6;
+    }
+    .rows-preview {
+      max-height: 220px; overflow-y: auto; border: 1px solid #1f2937; border-radius: 10px;
+    }
+    .rows-preview table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .rows-preview th, .rows-preview td { padding: 7px 9px; text-align: left; border-bottom: 1px solid #1f2937; white-space: nowrap; }
+    .rows-preview th { position: sticky; top: 0; background: #111827; color: #6b7280; font-size: 11px; text-transform: uppercase; }
+    .rows-preview td { color: #d1d5db; }
+    .rows-preview tr.invalid td { color: #f87171; }
+    .badge { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge.work { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .badge.school { background: rgba(20,184,166,0.15); color: #2dd4bf; }
+    .badge.personal { background: rgba(249,115,22,0.15); color: #fb923c; }
   </style>
 </head>
 <body>
@@ -120,10 +199,16 @@
       <p>Quick add from anywhere</p>
     </div>
 
+    <div class="tabs">
+      <button type="button" class="tab active" data-mode="single">Single</button>
+      <button type="button" class="tab" data-mode="bulk">Bulk import</button>
+    </div>
+
+    <!-- ============ SINGLE ============ -->
     <form id="task-form">
       <div class="field">
         <label>Task</label>
-        <input type="text" id="title" placeholder="What needs to be done?" required autofocus />
+        <input type="text" id="title" placeholder="What needs to be done?" autofocus />
       </div>
 
       <div class="field">
@@ -167,6 +252,64 @@
 
       <button type="submit" id="submit-btn">Add Task</button>
     </form>
+
+    <!-- ============ BULK ============ -->
+    <div id="bulk-panel" class="hidden">
+      <details class="guide">
+        <summary>File format &amp; field guide</summary>
+        <div class="guide-body">
+          <p>Upload a <strong>.csv</strong> or <strong>.json</strong> file, or paste JSON below. Each row/object is one task. Only <code>title</code> is required &mdash; everything else has a default.</p>
+          <table>
+            <tr><th>Field</th><th>Accepts</th><th>Default</th></tr>
+            <tr><td><code>title</code></td><td>text (required)</td><td>&mdash;</td></tr>
+            <tr><td><code>category</code></td><td><code>work</code>, <code>school</code>, <code>personal</code></td><td>personal</td></tr>
+            <tr><td><code>priority</code></td><td><code>1</code>/<code>2</code>/<code>3</code> or <code>high</code>/<code>med</code>/<code>low</code></td><td>2 (med)</td></tr>
+            <tr><td><code>due_date</code></td><td><code>YYYY-MM-DD</code></td><td>none</td></tr>
+            <tr><td><code>due_time</code></td><td><code>HH:MM</code> (24h)</td><td>none</td></tr>
+            <tr><td><code>notes</code></td><td>text</td><td>none</td></tr>
+            <tr><td><code>quick_print</code></td><td><code>true</code>/<code>false</code></td><td>false</td></tr>
+          </table>
+          <p><strong>JSON</strong> &mdash; an array of objects:</p>
+          <pre>[
+  { "title": "Submit expense report", "category": "work", "priority": "high", "due_date": "2026-07-05" },
+  { "title": "Renew license", "category": "work", "priority": 2, "due_time": "14:30", "quick_print": true },
+  { "title": "Call vendor", "notes": "Ask about invoice #204" }
+]</pre>
+          <p><strong>CSV</strong> &mdash; first row is the header (any subset/order of the fields above):</p>
+          <pre>title,category,priority,due_date,due_time,notes,quick_print
+Submit expense report,work,high,2026-07-05,,,false
+Renew license,work,2,,14:30,,true
+Call vendor,work,low,,,Ask about invoice #204,false</pre>
+          <p>Use the template buttons below to download a ready-to-edit starter file.</p>
+        </div>
+      </details>
+
+      <div class="dl-btns">
+        <button type="button" class="dl-btn" id="dl-csv">⬇ CSV template</button>
+        <button type="button" class="dl-btn" id="dl-json">⬇ JSON example</button>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <strong>Choose a file</strong> or drag &amp; drop
+        <small>Accepts .csv or .json</small>
+        <input type="file" id="file-input" accept=".csv,.json,application/json,text/csv" class="hidden" />
+      </div>
+
+      <div class="divider">or paste JSON</div>
+
+      <div class="field">
+        <textarea id="json-input" placeholder='[ { "title": "First task", "category": "work", "priority": "high" } ]' style="height:110px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;"></textarea>
+      </div>
+
+      <div class="field" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <input type="checkbox" id="bulk-print" style="width:20px;height:20px;accent-color:#8b5cf6;cursor:pointer;" />
+        <label for="bulk-print" style="margin:0;text-transform:none;font-size:14px;color:#9ca3af;cursor:pointer;">Print all directly (overrides per-row)</label>
+      </div>
+
+      <div id="preview" class="preview hidden"></div>
+
+      <button type="button" class="btn-primary" id="bulk-submit" disabled>Import tasks</button>
+    </div>
   </div>
 
   <div class="toast" id="toast">Task added!</div>
@@ -177,10 +320,31 @@
     const SUPABASE_KEY = 'sb_publishable_ODeoDNk6_4fNKK9EFysyXw_MXilpb06';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    const toast = document.getElementById('toast');
+    function showToast(message, isError) {
+      toast.textContent = message;
+      toast.classList.toggle('error', !!isError);
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    /* ---------------- Mode tabs ---------------- */
+    const form = document.getElementById('task-form');
+    const bulkPanel = document.getElementById('bulk-panel');
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const bulk = tab.dataset.mode === 'bulk';
+        form.classList.toggle('hidden', bulk);
+        bulkPanel.classList.toggle('hidden', !bulk);
+      });
+    });
+
+    /* ---------------- Single add ---------------- */
     let category = 'personal';
     let priority = 2;
 
-    // Category toggle buttons
     document.querySelectorAll('.cat-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
@@ -189,7 +353,6 @@
       });
     });
 
-    // Priority toggle buttons
     document.querySelectorAll('.pri-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.pri-btn').forEach(b => b.className = 'pri-btn');
@@ -198,16 +361,15 @@
       });
     });
 
-    const form = document.getElementById('task-form');
-    const toast = document.getElementById('toast');
     const submitBtn = document.getElementById('submit-btn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const title = document.getElementById('title').value.trim();
+      if (!title) { showToast('Task name is required.', true); return; }
       submitBtn.disabled = true;
       submitBtn.textContent = 'Adding...';
 
-      const title = document.getElementById('title').value.trim();
       const dueDate = document.getElementById('due_date').value || null;
       const dueTime = document.getElementById('due_time').value || null;
       const notes = document.getElementById('notes').value.trim() || null;
@@ -215,19 +377,11 @@
 
       try {
         const { error } = await sb.from('remote_tasks').insert({
-          title,
-          priority,
-          category,
-          source: 'self',
-          due_date: dueDate,
-          due_time: dueTime,
-          notes,
-          quick_print: quickPrint,
+          title, priority, category, source: 'self',
+          due_date: dueDate, due_time: dueTime, notes, quick_print: quickPrint,
         });
-
         if (error) throw error;
         form.reset();
-        // Reset button states
         document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
         document.querySelector('[data-cat="personal"]').classList.add('active-personal');
         document.querySelectorAll('.pri-btn').forEach(b => b.className = 'pri-btn');
@@ -238,18 +392,291 @@
         showToast(quickPrint ? 'Task added & printing!' : 'Task added! Sync from dashboard.');
       } catch (err) {
         console.error(err);
-        showToast('Something went wrong. Try again.');
+        showToast('Something went wrong. Try again.', true);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Add Task';
       }
     });
 
-    function showToast(message) {
-      toast.textContent = message;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2500);
+    /* ---------------- Bulk import ---------------- */
+    const VALID_CATS = ['work', 'school', 'personal'];
+    const PRIORITY_WORDS = {
+      '1': 1, 'high': 1, 'h': 1,
+      '2': 2, 'med': 2, 'medium': 2, 'm': 2, 'normal': 2,
+      '3': 3, 'low': 3, 'l': 3,
+    };
+    const TRUE_WORDS = ['true', '1', 'yes', 'y', 'x'];
+    const FALSE_WORDS = ['false', '0', 'no', 'n', ''];
+
+    let validRows = [];   // cleaned task objects ready to insert
+
+    // Minimal RFC-4180-ish CSV parser (handles quotes, commas & newlines in quotes)
+    function parseCSV(text) {
+      const rows = [];
+      let row = [], field = '', inQuotes = false;
+      text = text.replace(/^﻿/, ''); // strip BOM
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuotes) {
+          if (c === '"') {
+            if (text[i + 1] === '"') { field += '"'; i++; }
+            else inQuotes = false;
+          } else field += c;
+        } else if (c === '"') {
+          inQuotes = true;
+        } else if (c === ',') {
+          row.push(field); field = '';
+        } else if (c === '\r') {
+          // ignore; handled by \n
+        } else if (c === '\n') {
+          row.push(field); rows.push(row); row = []; field = '';
+        } else field += c;
+      }
+      if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+      // drop fully-empty trailing rows
+      return rows.filter(r => r.some(cell => cell.trim() !== ''));
     }
+
+    function csvToObjects(text) {
+      const rows = parseCSV(text);
+      if (rows.length === 0) return [];
+      const headers = rows[0].map(h => h.trim().toLowerCase());
+      return rows.slice(1).map(r => {
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = (r[i] !== undefined ? r[i].trim() : ''); });
+        return obj;
+      });
+    }
+
+    function toBool(v, dflt) {
+      if (v === undefined || v === null || v === '') return dflt;
+      if (typeof v === 'boolean') return v;
+      const s = String(v).trim().toLowerCase();
+      if (TRUE_WORDS.includes(s)) return true;
+      if (FALSE_WORDS.includes(s)) return false;
+      return null; // signals invalid
+    }
+
+    // Validate & normalize a raw object -> { ok, task?, error? }
+    function normalizeRow(raw) {
+      const errs = [];
+      const get = (k) => {
+        const v = raw[k];
+        return (v === undefined || v === null) ? '' : String(v).trim();
+      };
+
+      const title = get('title');
+      if (!title) errs.push('missing title');
+
+      let cat = get('category').toLowerCase();
+      if (!cat) cat = 'personal';
+      else if (!VALID_CATS.includes(cat)) errs.push(`bad category "${raw.category}"`);
+
+      let priRaw = get('priority').toLowerCase();
+      let pri = 2;
+      if (priRaw) {
+        if (PRIORITY_WORDS[priRaw] !== undefined) pri = PRIORITY_WORDS[priRaw];
+        else errs.push(`bad priority "${raw.priority}"`);
+      }
+
+      const dueDate = get('due_date');
+      if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) errs.push(`bad due_date "${dueDate}" (use YYYY-MM-DD)`);
+
+      const dueTime = get('due_time');
+      if (dueTime && !/^\d{1,2}:\d{2}$/.test(dueTime)) errs.push(`bad due_time "${dueTime}" (use HH:MM)`);
+
+      const qp = toBool(raw.quick_print, false);
+      if (qp === null) errs.push(`bad quick_print "${raw.quick_print}"`);
+
+      const notes = get('notes');
+
+      if (errs.length) return { ok: false, error: errs.join('; '), title };
+      return {
+        ok: true,
+        task: {
+          title, category: cat, priority: pri, source: 'self',
+          due_date: dueDate || null,
+          due_time: dueTime || null,
+          notes: notes || null,
+          quick_print: qp,
+        },
+      };
+    }
+
+    const previewEl = document.getElementById('preview');
+    const bulkSubmit = document.getElementById('bulk-submit');
+    const jsonInput = document.getElementById('json-input');
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    function renderPreview(results) {
+      validRows = results.filter(r => r.ok).map(r => r.task);
+      const invalid = results.filter(r => !r.ok);
+      previewEl.classList.remove('hidden');
+
+      let html = `<div class="preview-summary"><span class="ok">${validRows.length} valid</span>`;
+      if (invalid.length) html += ` &nbsp;·&nbsp; <span class="bad">${invalid.length} with errors</span>`;
+      html += `</div>`;
+
+      if (invalid.length) {
+        html += '<div class="errors">';
+        invalid.forEach((r, i) => {
+          const rowNum = results.indexOf(r) + 1;
+          html += `<div>Row ${rowNum}${r.title ? ` (“${esc(r.title)}”)` : ''}: ${esc(r.error)}</div>`;
+        });
+        html += '</div>';
+      }
+
+      if (validRows.length) {
+        html += '<div class="rows-preview"><table><thead><tr><th>#</th><th>Title</th><th>Cat</th><th>Pri</th><th>Due</th></tr></thead><tbody>';
+        const priLabel = { 1: 'High', 2: 'Med', 3: 'Low' };
+        validRows.slice(0, 100).forEach((t, i) => {
+          const due = [t.due_date, t.due_time].filter(Boolean).join(' ') || '—';
+          html += `<tr><td>${i + 1}</td><td>${esc(t.title)}</td><td><span class="badge ${t.category}">${t.category}</span></td><td>${priLabel[t.priority]}</td><td>${esc(due)}</td></tr>`;
+        });
+        html += '</tbody></table></div>';
+        if (validRows.length > 100) html += `<div style="font-size:12px;color:#6b7280;margin-top:6px;">…and ${validRows.length - 100} more</div>`;
+      }
+
+      previewEl.innerHTML = html;
+      bulkSubmit.disabled = validRows.length === 0;
+      bulkSubmit.textContent = validRows.length
+        ? `Import ${validRows.length} task${validRows.length === 1 ? '' : 's'}`
+        : 'Import tasks';
+    }
+
+    // Parse arbitrary input text (from file or textarea). kind: 'json' | 'csv' | 'auto'
+    function processInput(text, kind) {
+      text = (text || '').trim();
+      if (!text) { previewEl.classList.add('hidden'); bulkSubmit.disabled = true; validRows = []; return; }
+
+      let rawList;
+      const looksJson = text[0] === '[' || text[0] === '{';
+      try {
+        if (kind === 'json' || (kind === 'auto' && looksJson)) {
+          const parsed = JSON.parse(text);
+          rawList = Array.isArray(parsed) ? parsed : [parsed];
+        } else {
+          rawList = csvToObjects(text);
+        }
+      } catch (err) {
+        previewEl.classList.remove('hidden');
+        previewEl.innerHTML = `<div class="errors">Could not parse ${kind === 'csv' ? 'CSV' : 'JSON'}: ${esc(err.message)}</div>`;
+        bulkSubmit.disabled = true; validRows = [];
+        return;
+      }
+
+      if (!Array.isArray(rawList) || rawList.length === 0) {
+        previewEl.classList.remove('hidden');
+        previewEl.innerHTML = `<div class="errors">No task rows found in the file.</div>`;
+        bulkSubmit.disabled = true; validRows = [];
+        return;
+      }
+
+      renderPreview(rawList.map(normalizeRow));
+    }
+
+    // Textarea live parse (JSON)
+    let jsonDebounce;
+    jsonInput.addEventListener('input', () => {
+      clearTimeout(jsonDebounce);
+      jsonDebounce = setTimeout(() => processInput(jsonInput.value, 'auto'), 250);
+    });
+
+    // File handling
+    const fileInput = document.getElementById('file-input');
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('click', () => fileInput.click());
+    ['dragover', 'dragenter'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+    ['dragleave', 'dragend'].forEach(ev => dropzone.addEventListener(ev, () => dropzone.classList.remove('dragover')));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault(); dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+    function handleFile(file) {
+      const kind = /\.json$/i.test(file.name) ? 'json' : (/\.csv$/i.test(file.name) ? 'csv' : 'auto');
+      const reader = new FileReader();
+      reader.onload = () => {
+        dropzone.querySelector('strong').textContent = file.name;
+        // Mirror JSON files into the textarea for transparency; keep CSV in file-only
+        if (kind === 'json') jsonInput.value = reader.result;
+        processInput(reader.result, kind);
+      };
+      reader.onerror = () => showToast('Could not read file.', true);
+      reader.readAsText(file);
+    }
+
+    // Submit bulk
+    bulkSubmit.addEventListener('click', async () => {
+      if (!validRows.length) return;
+      const forcePrint = document.getElementById('bulk-print').checked;
+      const payload = validRows.map(t => forcePrint ? { ...t, quick_print: true } : t);
+
+      bulkSubmit.disabled = true;
+      const orig = bulkSubmit.textContent;
+      bulkSubmit.textContent = `Importing ${payload.length}...`;
+
+      try {
+        // Insert in chunks to stay well within request limits
+        const CHUNK = 200;
+        for (let i = 0; i < payload.length; i += CHUNK) {
+          const { error } = await sb.from('remote_tasks').insert(payload.slice(i, i + CHUNK));
+          if (error) throw error;
+        }
+        showToast(`Imported ${payload.length} task${payload.length === 1 ? '' : 's'}! Sync from dashboard.`);
+        // Reset bulk state
+        jsonInput.value = '';
+        fileInput.value = '';
+        dropzone.querySelector('strong').textContent = 'Choose a file';
+        previewEl.classList.add('hidden');
+        previewEl.innerHTML = '';
+        validRows = [];
+        document.getElementById('bulk-print').checked = false;
+        bulkSubmit.textContent = 'Import tasks';
+        bulkSubmit.disabled = true;
+      } catch (err) {
+        console.error(err);
+        showToast('Import failed. ' + (err.message || 'Try again.'), true);
+        bulkSubmit.disabled = false;
+        bulkSubmit.textContent = orig;
+      }
+    });
+
+    /* ---------------- Template downloads ---------------- */
+    function download(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    document.getElementById('dl-csv').addEventListener('click', () => {
+      const csv = [
+        'title,category,priority,due_date,due_time,notes,quick_print',
+        'Submit expense report,work,high,2026-07-05,,,false',
+        'Renew software license,work,2,,14:30,,true',
+        'Call vendor about invoice,work,low,,,"Ask about invoice #204, net-30 terms",false',
+        'Prep team meeting notes,work,med,2026-07-03,09:00,,false',
+      ].join('\r\n') + '\r\n';
+      download('todo-printer-template.csv', csv, 'text/csv');
+    });
+
+    document.getElementById('dl-json').addEventListener('click', () => {
+      const example = [
+        { title: 'Submit expense report', category: 'work', priority: 'high', due_date: '2026-07-05' },
+        { title: 'Renew software license', category: 'work', priority: 2, due_time: '14:30', quick_print: true },
+        { title: 'Call vendor about invoice', category: 'work', priority: 'low', notes: 'Ask about invoice #204, net-30 terms' },
+        { title: 'Prep team meeting notes', category: 'work', priority: 'med', due_date: '2026-07-03', due_time: '09:00' },
+      ];
+      download('todo-printer-example.json', JSON.stringify(example, null, 2), 'application/json');
+    });
   </script>
 </body>
 </html>
